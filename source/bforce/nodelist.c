@@ -296,6 +296,7 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 	if( strcmp(name+strlen(name)-4, ".999") == 0 )
 	{
 	     char tmpseek[MAX_NAME];
+	     char tmpseekdir[MAX_NAME];
 	     char tmpname[MAX_NAME];
 	     struct dirent *ndir;
 	     DIR *ndirstream;
@@ -305,6 +306,7 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 	     }
 	     else
 	     {
+		  
 		  strncpy(tmpname, name, sizeof(tmpname));
 		  struct stat ndfile;
 		  time_t lasttime = 0;
@@ -318,7 +320,11 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 		       {
 			    if( (strncmp(tmpseek, tmpname, (strlen(tmpseek)-3) ) == 0) )
 			    {
-				 if( stat(tmpseek, &ndfile) )
+				 
+				 strncpy(tmpseekdir, dir, sizeof(tmpseekdir));
+				 strncat(tmpseekdir, tmpseek, sizeof(tmpseekdir));
+				 
+				 if( (stat(tmpseekdir, &ndfile)) == 0 )
 				 {
 				      if( ndfile.st_ctime > lasttime )
 				      {

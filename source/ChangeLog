@@ -1,6 +1,8 @@
 2005-01-16  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
 
 	* bforce/nodelist.c (nodelist_open): fixed mask detection
+	* bforce/nodelist.c (nodelist_open): added tmpseekdir, contains
+	full path to currently seeked nodelist
 
 2005-01-12  Andrey Slusar  <anray@users.sourceforge.net>
 
