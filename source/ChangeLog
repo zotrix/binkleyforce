@@ -1,3 +1,7 @@
+2005-03-22  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
+
+	* INSTALL.ru: added some information
+
 2005-02-21  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 
 	* bforce/sess_answ.c (answ_system): fixed deiniting of tcpip port

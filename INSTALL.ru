@@ -43,13 +43,18 @@ cd <SRCDIR>/bforce-0.22.8.ugenk1/source
 
 ./configure
 
+## WARNING! Внимание!
+## Новые версии bforce собираются с поддержкой syslog по умолчанию.
+## Если вы не знаете что это/зачем вам это нужно - тогда делайте
+## ./configure --disable-syslog
+
 При необходимости исправьте Makefile для ваших нужд.
 Запустите команду make (для bsd - gmake):
 
 make
 
 В случае ошибок при выполнении команды make пишите bugreport на
-e.kozhuhovskiy@gmail.com
+e.kozhuhovskiy@gmail.com или в эхоконференцию ru.unix.ftn
 
 Возможно, прийдется пересоздать configure с помощью autoconf
 
@@ -98,6 +103,35 @@ nlookup <ftn_address>
 
 outman - см. "Настройка". Попробуйте outman --help
 
+В папке debian лежат man-страницы.
+TODO: дописать Makefile для установки man-pages
+
+Совместная работа с mgetty
+==========================
+Для того, что бы узел мог отвечать на входящие звонки, необходимо установить
+соотв. програмное обеспечение. Наиболее распространенная программа - mgetty.
+Для того, что бы она могла работать на ftn-узле, необходимо собрать ее с опцией
+-DFIDO. В случае дистрибутивной сборки это можно проверить с помощью
+cat `which mgetty` |strings |grep FIDO |wc -l
+Если вы получите число, отличное от нуля, то вам повезло :)
+
+В login.config допишите следующую конструкцию:
+/FIDO/  news       fido    /usr/bin/bforce @
+
+где news - это пользователь, из-под которого у вас работает ftn-подсистема.
+
+Совместная работа с inetd/xinetd
+================================
+К сожалению (или к счастью), bforce не умеет самостоятельно принимать входящие
+binkd/ifc вызовы. Для этого вам прийдется использовать суперсервер интернета -
+inetd или xinetd.
+Вот примеры для inetd:
+binkp stream tcp nowait news /usr/bin/bforce bforce -i binkp
+ifc   stream tcp nowait news /usr/bin/bforce bforce -i auto
+
+Проверьте, что бы у вас были соотв. строки в /etc/services, например:
+binkp           24554/tcp                       # binkp fidonet protocol
+ifc             60179/tcp                       # fidonet EMSI over TCP
 
 Дополнительные утилиты
 ======================
@@ -106,9 +140,8 @@ outman - см. "Настройка". Попробуйте outman --help
 bflan			   - bforce log analyzer
 callout.sh		   - скрипт для отзвонки на аплинков
 outman		 	   - скрипт outman
-timesync.tcl		   - скрипт для синхорнизации времени
+timesync.tcl		   - скрипт для синхорнизации времени с узлами ftn.
 init.d/bforce		   - init-скрипт для RedHat
-init.d/bforce.debian	   - init-скрипт для non-RedHat
 bfha			   - bforce history analyzer (bfha)
 bfha/README		   - bfha README
 bfha/bfha.pl		   - собственно, bfha
