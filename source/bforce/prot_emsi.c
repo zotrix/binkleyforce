@@ -421,7 +421,7 @@ static int sm_rx_waitseq(s_rx_emsidat *d)
 				}
 				else if( !strncasecmp(d->buf, "EMSI_INQC816", 12) )
 				{
-				        return SM2;
+				        return SM1;
 				}
 				else
 				{
