@@ -19,8 +19,8 @@ set def_zone 2
 set def_net  5020
 set def_node 1398
 
-# Path to your main BSO directory (not implemented)
-#set bso_dir "/var/spool/ftn/out"
+# Path to your main BSO directory
+set bso_dir "/var/spool/fido/bso.out"
 
 # Path to your ASO directory
 set aso_dir "/var/spool/fido/amiga.out"
@@ -45,6 +45,7 @@ proc stupid_user {} {
 	puts "  -crash    set crash flavor"
 	puts "  -kill     kill files after send"
 	puts "  -truncate truncate files after send"
+	puts "  -bso      BSO style names (ASO default)"
 	puts ""
 	puts "Mail bug reports to <adb@newmail.ru>"
 	exit 1
@@ -188,7 +189,13 @@ proc filename_aso {addr flavor} {
 
 proc bsy_exist {addr} {
 	
-	set bsyname [filename_aso $addr "bsy"]
+	global bso
+
+	if { $bso } {
+		set bsyname [filename_bso $addr "bsy"]
+	} else {
+		set bsyname [filename_aso $addr "bsy"]
+	}
 
 	if { [file exists $bsyname] } {
 		return 1
@@ -199,7 +206,13 @@ proc bsy_exist {addr} {
 
 proc command_freq {addr files} {
 	
-	set reqname [filename_aso $addr "freq"]
+	global bso
+
+	if { $bso } {
+		set reqname [filename_bso $addr "freq"]
+	} else {
+		set reqname [filename_aso $addr "freq"]
+	}
 	set name {}
 
 	# puts "debug: file request name is '$reqname'"
@@ -216,7 +229,13 @@ proc command_freq {addr files} {
 
 proc command_poll {addr flavor} {
 	
-	set floname [filename_aso $addr $flavor]
+	global bso
+
+	if { $bso } {
+		set floname [filename_bso $addr $flavor]
+	} else {
+		set floname [filename_aso $addr $flavor]
+	}
 
 	if { ![file exists $floname] } {
 	
@@ -232,7 +251,13 @@ proc command_poll {addr flavor} {
 
 proc command_send {addr files flavor action} {
 
-	set floname [filename_aso $addr $flavor]
+	global bso
+
+	if { $bso } {
+		set floname [filename_bso $addr $flavor]
+	} else {
+		set floname [filename_aso $addr $flavor]
+	}
 	set name {}
 	set curdir [exec pwd]
 
@@ -285,6 +310,7 @@ set addr    {}
 set files   {}
 set flavor  "normal"
 set action  "nothing"
+set bso     0
 
 for {set i 0} {$i < $argc} {incr i} {
 
@@ -308,6 +334,10 @@ for {set i 0} {$i < $argc} {incr i} {
 			"truncate" {
 				set action "truncate"
 			}
+			"bso" {
+				set bso 1
+			}
+
 			default {
 				puts "unknown command line option '$arg'"
 				stupid_user
