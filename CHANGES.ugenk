@@ -24,3 +24,4 @@
 0.22.8.ugenk4
 =============
  + fixed problems with license (thnx to Jonathan Gonzales V. from gnu.org)
+ + added nomail flag
