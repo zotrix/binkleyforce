@@ -11,8 +11,7 @@ BuildRoot: %{_tmppath}/%{name}-root
 BFORCE is a FTN mailer. Supports PSTN and binkp sessions.
 
 %prep
-%setup -q -n %{name}-%{version}.%{release}
-
+#%setup -q -n %{name}-%{version}.%{release}
 cd source
 ./configure --prefix=/usr --disable-log-passwd --sysconfdir=/etc/bforce --bindir=/usr/bin --with-owner=uucp --with-group=news
 	    	    	    
