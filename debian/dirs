@@ -1,0 +1,13 @@
+usr/bin
+etc/bforce
+etc/default
+etc/default/bforce
+var/spool/fido/out
+var/spool/fido/in
+var/spool/fido/pin
+var/spool/fido/ndl
+var/spool/fido/fbox
+var/spool/bforce
+var/log/bforce
+var/run/bforce
+

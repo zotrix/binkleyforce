@@ -1,0 +1,27 @@
+bforce (0.22.8.ugenk3-1) unstable; urgency=low
+
+  * New upstream release
+  * revision of manual pages
+
+ -- Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>  Tue, 16 Nov 2004 08:42:04 +0200
+
+bforce (0.22.8.ugenk2-2) unstable; urgency=low
+
+  * fixed some bugs in configfiles
+  * sorry, bforce compiled without syslog support (maybe in the next version?)
+
+ -- Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>  Tue,  2 Nov 2004 10:44:03 +0200
+
+bforce (0.22.8.ugenk2-1) unstable; urgency=low
+
+  * Initial Release.
+  * Really working rules ;)
+
+ -- Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>  Sun,  31 Oct 2004 12:04:10 +0200
+
+bforce (0.22.8.ugenk1-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Evgeniy Kozhuhovskiy <ugenk@tut.by>  Sun,  4 Jul 2004 11:14:15 +0200
+

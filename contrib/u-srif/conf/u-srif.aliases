@@ -1,0 +1,6 @@
+
+files     /home/ftp/pub/info/happy.zip
+filelist  /home/ftp/pub/info/happy.lst
+test      /home/ftp/pub/fileecho/PNT5020/pnt5020.zip
+bforce    /home/ftp/pub/bforce/bforce-last.tar.gz
+

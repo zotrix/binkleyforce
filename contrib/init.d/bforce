@@ -1,0 +1,51 @@
+#!/bin/sh
+#
+# bforce          FTN mailer
+#
+# chkconfig: 345 94 14
+# description: Starts and stops the binkleyforce mailer daemon
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+OWNER=uucp
+BFORCE=/usr/local/fido/bin/bforce
+
+# Source function library.
+. /etc/init.d/functions
+
+[ -f $BFORCE ] || exit 0
+
+# See how we were called.
+case "$1" in
+  start)
+    # Start daemon.
+    echo -n "Starting bforce: "
+    su $OWNER -c ". /etc/rc.d/init.d/functions; daemon $BFORCE -d"
+    echo
+    touch /var/lock/subsys/bforce
+    ;;
+  stop)
+    # Stop daemon.
+    echo -n "Shutting down bforce: "
+    killproc bforce
+    rm -f /var/lock/subsys/bforce
+    echo
+    ;;
+  status)
+    status bforce
+    exit $?
+    ;;
+  restart)
+    $0 stop
+    $0 start
+    exit $?
+    ;;
+  *)
+    echo "Usage: bforce {start|stop|status|restart}"
+    exit 1
+esac
+
+exit 0

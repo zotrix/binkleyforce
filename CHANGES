@@ -1,0 +1,60 @@
+* New: now "bforce" can start outgoing sessions simply on stdin/stdout.
+  (command line option "-o")
+* New: file boxes support. New config keywords "filebox" and
+  "filebox_directory"
+* Bugfix: now "bforce" will remove .bsy locks immediately after
+  disconnection
+* New: implemented CRAM-MD5 authentication in the BinkP protocol
+* New: new command line option "-c" in the "bfstat" utility
+* New: BinkP seems to be working fine now
+* Bugfix: some file names could be spoiled on the Hydra protocol while
+  receiving (it is a bug with receiving files with the name "d" instead
+  of the real one)
+* New: implementation of the YooHoo handshake protocol
+* New: now will create .csy locks while dialing and convert it to
+  the .bsy only at handshake
+* Bugfix: now daemon will not call to the nodes marked as Hold/Down
+  in a nodelist
+* New: added sessions history loging. New config keyword "sessions_history"
+  For the history file format look sources.
+* Bugfix: Hydra didn't send "short" file name, as a result some mailers
+  with strict checks could not receive files with long names :))
+* New: removed check for "short" file name length in the Hydra
+
+0.22 (31-07-2000)
+
+* Bugfix: at incoming sessions used speed limit for outgoing sessions
+* Bugfix: RH1 mode didn't work correctly
+* Bugfix: outgoing BinkP password protected sessions allways fail
+  with invalid password error
+* Bugfix: files from the AmigaDos Outbound send in incorrect order
+* New: passwords are case insensitive now (again)
+* New: improved EMSI handshake, now it should work better with systems
+  using Cisco or something like that with login prompt
+* New: added writing of the remote intro to log (like *ico). To control
+  this feature added new option "[No]Intro"
+* New: protocol selection options now works at incoming sessions too
+* New: added support for modem chat commands, e.g "ATz| ATm0|", mailer
+  will wait for modem response ("OK" or "ERROR") after sending each
+  substring and only then send the next one
+* Bugfix: file masks checker didn't work correctly than '!' (not)
+  prefix was used. Now "DelayFiles", "SkipFiles" should work normaly
+* New: Added new expression elements: Exist <file name>, Mailer <mailer
+  name substring>, Port <port name substring>
+* New: Added autoconfiguration of UUCP lock files directory
+* Bugfix: daemon could call even to "-Unpublished-" phone if it was
+  specified in override.
+* Bugfix: could not parse received EMSI data packet if character ']' was
+  escaped as '\5d' by remote mailer (e.g. DVMMail do such escaping)
+* New: added support for Tx/Rx windows and ASC/UUE packets in the Hydra
+* Bugfix: files skipped by remote mailer was not really skipped :)
+* New: extended algorithm of renaming received file if file with such name
+  allready exist in the inbound directory:
+  - For netmail packets and '.tic' files: generate new random name
+  - For arcmail packets: rotate extension characters, as most other mailers do
+  - For file requests: allways overwrite existing file 
+  - For all other files: add numeric extension as in previous versions
+* New: added ability to recode file names and intro text to another charset
+  then sending/receiving. Recode tables are compartible with HPT. New
+  config keywords: "Recode_file_in", "Recode_file_out", "Recode_intro_in"
+

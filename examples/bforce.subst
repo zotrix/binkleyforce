@@ -1,0 +1,33 @@
+#
+#  Example of overriding node with hidden lines:
+#    Override 1:2/3 Phone 123-1313 Worktime 21:00-07:00 \
+#            Hidden Phone 123-1314 Worktime 09:00-13:00 \
+#            Hidden Phone 123-1315 Worktime 09:00-21:00 \
+#            Hidden Phone 123-1316 Flags CM
+#
+#  You may specify different time for different days of week:
+#    Override 1:2/3 Phone 123-1313 Worktime Wk20:00-07:30,We00:00-24:00
+#
+#  Allowed day prefixes: Sun, Mon, Tue, Wed, Thu, Fri, Sat, Any, Wk, We
+#
+#  To use BinkP protocol, write:
+#    Override 1:2/3 Ipaddr f3.n2.z1.fidonet.net Flags CM,BINKP
+#
+#  If you want never call to certain node, write:
+#    Override 1:2/3 Phone Unpublished
+#
+# Happy
+override 776:308/1      Ipaddr 192.168.1.1 Flags CM,IFC
+override 776:308/1.1    Ipaddr 192.168.1.2 Flags CM,BINKP
+
+# Estar
+override 2:5020/758     Phone 961-2243
+
+# Hard Core
+override 2:5020/1398    Phone 700-0245 Worktime 00:00-07:00
+
+# Stick's
+override 2:5020/1682    Phone 308-5537 Worktime 23:30-07:00
+
+override 2:5020/2120    Ipaddr 192.168.1.1 flags BINKP,CM
+

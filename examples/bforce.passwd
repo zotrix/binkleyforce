@@ -1,0 +1,9 @@
+#
+# Format: password <address> <password>
+#
+
+password 2:5020/1398 passwd1
+password 2:5020/1682 passwd2
+password 2:5020/1811 passwd3
+password 776:308/8 passwd4
+

@@ -1,0 +1,26 @@
+0.22.8.ugenk1
+=============
+ + initial release, based on bforce 0.22.8.kst8
+ * fixed problem with worktime detecting
+ + makefiles fixed (removed make update, now make install installs config files with extension .sample)
+ + added --with-user and --with-group options to ``configure'' script.
+ + installation directories by default are compliance with default fidogate installation
+
+0.22.8.ugenk2
+=============
+ * pathes by Andrey Slusar @ 2:467/126
+   (total 12: patch-bforce.c, patch-bfstat.c, patch-daemon.c, patch-expression.y,
+   patch-nlookup.c, patch-prot_binkp.c, patch-prot_emsi.c, patch-prot_yoohoo.c, patch-prot_zmrecv.c,
+   patch-prot_zmsend.c, patch-sess_call.c, patch-sess_stat.c)
+ + added syslog support (see SYSLOG)
+ + fixed nlookup (broken in ugenk1)
+ + spec file now goes with bforce
+
+0.22.8.ugenk3
+=============
+ + fixed working with syslog (not tested yet, any volonteers?)
+ * some bugfixes
+
+0.22.8.ugenk4
+=============
+ + fixed problems with license (thnx to Jonathan Gonzales V. from gnu.org)

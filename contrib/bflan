@@ -1,0 +1,384 @@
+#!/usr/bin/perl
+#
+# It is a log file analyser for 'binkleyforce' mailer.
+#
+# Copyright (c) 1998-99 by Alexander Belkin
+#
+# $Id$:
+#
+# If you have any questions, suggestions or wishes, feel free to contact 
+# with me. My address: 2:5020/1398.11@fidonet
+#
+# To post into news, use bflan |inews -h -O -S
+$program_name = "bforce-lan v1.0/Perl/Linux";
+$station_name = "My Station";
+$log_file     = "/var/log/bforce/bf-log.ttyS0";
+$news_header  = "From: Statistic Robot <postmaster\@fido.xxx.local>\n".
+                "Newsgroups: junk\n".
+                "Subject: Sessions statistic.\n";
+
+#main
+#{
+	if( &ReadLog($log_file) == 0 )
+	{
+		print $news_header;
+		print "\n";
+		print "\"$system_name\" statistic from <$TimeFirst> to <$TimeLast>\n";
+		print "\n";		
+    	&TotalStatistic();
+    	print "\n";
+    	&SessionsStatistic();
+    }
+    exit(0);
+#}
+
+sub ReadLog
+{
+    my($start);
+    
+    if( open( FLOG, $_[0] ) == 0 )
+    {
+		print "Can't open log \"$_[0]\": $!\n";
+		return 1;
+    }
+    $start = 0;
+    $cnt = 0;
+    $TimeFirst = "";
+    $TimeLast = "";
+    
+    # Read in information from logfile
+    
+    while( <FLOG> )
+    {
+	chomp;
+	
+	( $Mon, $Day, $Time, $Pid, $Text ) = split( /[ \t]+/, $_, 5 );
+	
+	if( $TimeFirst eq "" )
+	{
+	    $TimeFirst = "$Mon $Day $Time";
+	}
+	
+	if( $start == 0 )
+	{
+	    if( !defined($Connect[$cnt]) )
+	    {
+		$Address[$cnt]  = "";
+		$Connect[$cnt]  = "?????";
+		$InFiles[$cnt]  = 0;
+		$OutFiles[$cnt] = 0;
+		$InBytes[$cnt]  = 0;
+		$OutBytes[$cnt] = 0;
+		$Status[$cnt]   = "U";
+		$Success[$cnt]  = " ";
+	    }
+	    if( $Text =~ /^calling/ )
+	    {
+		$Text =~ /^calling ([\d:\/.]+)/;
+		$PidsCall{$Pid} = $1;
+		$Calls{$1} = 0 if (!defined( $Calls{$1} ));
+		$Calls{$1}++;
+	    }
+	    elsif( $Text =~ /^connect/ )	    
+	    {
+		$Text =~ /^connect "\D*(\d+).*$/; 
+		$Connect[$cnt] = $1;
+	    }
+	    elsif( $Text =~ /^TCP\/IP connect/ )	    
+	    {
+		$Connect[$cnt] = "TCPIP";
+	    }
+	    elsif( $Text =~ /^outbound (\S+) session/ )
+	    {
+		$start = 1;
+		$Time =~ /^(..):(..):(..)$/;
+		$Start[$cnt] = ( $1 * 60 + $2 ) * 60 + $3;
+		$Direction[$cnt] = "O";
+		$Address[$cnt] = $PidsCall{$Pid};
+		$MySexyPid = $Pid;
+		next;
+	    }
+	    elsif( $Text =~ /^inbound (\S+) session/ )
+	    {
+		$start = 1;
+		$Time =~ /^(..):(..):(..)$/;
+		$Start[$cnt] = ( $1 * 60 + $2 ) * 60 + $3;
+		$Direction[$cnt] = "I";
+#		$kAddress[$cnt] = $PidsCall{$Pid} if( defined($PidsCall{$Pid}) );
+		$MySexyPid = $Pid;
+		next;
+	    }
+	    next;
+	}
+	
+	if( ($start == 1) && ($Pid eq $MySexyPid) )
+	{
+	    if( $Text =~ /^remote is password protected system/ )
+	    {
+		$Status[$cnt] = "P";
+	    }
+	    elsif( $Text =~ /^remote is listed system/ )
+	    {
+		$Status[$cnt] = "L";
+	    }
+	    elsif( $Text =~ /^remote is unlisted system/ )
+	    {
+		$Status[$cnt] = "U";
+	    }
+	    elsif( $Text =~ /^[ \t]*Address :/ )
+	    {
+	    	next if( $Address[$cnt] ne "" );
+		$Text =~ /^.+:[ \t]+([\d:.\/]+).*$/;
+		$Address[$cnt] = $1;
+	    }
+	    elsif( $Text =~ /^rcvd: \".+\" \d+/ )
+	    {
+		$Text =~ /^rcvd: \".+\" (\d+)/;
+		$InBytes[$cnt] += $1;
+		$InFiles[$cnt] ++;
+	    }
+	    elsif( $Text =~ /^sent: \".+\" \d+/ )
+	    {
+		$Text =~ /^sent: \".+\" (\d+)/;
+		$OutBytes[$cnt] += $1;
+		$OutFiles[$cnt] ++;
+	    }
+	    elsif( $Text =~ /^session rc = \d+/ )
+	    {
+		$Text =~ /^session rc = (\d+)/;
+		if( $1 != 0 )
+		{
+		    $Success[$cnt] = "A";
+		}
+		$Time =~ /^(..):(..):(..)$/;
+		$Finish[$cnt]  = ( $1 * 60 + $2 ) * 60 + $3;
+		$OnLine[$cnt]  = $Finish[$cnt] - $Start[$cnt];
+		$OnLine[$cnt] += 86400 if(( $Finish[$cnt] - $Start[$cnt] ) < 0 );
+		$start = 0;
+		$cnt++;
+	    }
+	}
+	# got another PID!
+	elsif( $Text =~ /^connect \".+\"/
+	        || $Text =~ /^inbound (\S+) session/
+		|| $Text =~ /^outbound (\S+) session/ )
+	{
+	    # Possible there was incorrectly terminated session
+	    # due to mailer crash or killing, so getting this string
+	    # can mean that we need to break reading session statistic?
+	    # But we can also get it if log file used not only by one
+	    # mailer at the same time, so.. ignore :)
+	}
+    } # end of while( <FLOG> )
+    
+    close(FLOG);
+    
+    $TimeLast = "$Mon $Day $Time" if( $Mon && $Day && $Time );
+}
+
+sub SessionsStatistic
+{
+    local ($addr, $start, $finish, $online, $ibyte, $obyte, $cps, $speed);
+    my ($i);
+    
+    $~ = HEADER;
+    write;
+    $~ = EACH;
+    
+    for ($i = 0; $i < $cnt; $i++)
+    {
+	$addr    = $Address[$i];
+	$stat    = "$Direction[$i]$Status[$i]$Success[$i]";
+	$start   = sec2str($Start[$i], "short");
+	$finish  = sec2str($Finish[$i], "short");
+	$online  = sec2str($OnLine[$i], "long");
+	$ibyte   = $InBytes[$i];
+	$in      = $InFiles[$i];
+	$obyte   = $OutBytes[$i];
+	$on      = $OutFiles[$i];
+	$cps     = int( ($ibyte + $obyte) / $OnLine[$i] ) if ($OnLine[$i] > 0);
+	$speed   = $Connect[$i];
+	$ibyte   = num2siz( $ibyte ); 
+	$obyte   = num2siz( $obyte );
+	write;
+    }
+    
+    $~ = FOOTER;
+    write;
+}
+
+sub TotalStatistic
+{
+	undef( %hSystems );
+	undef( %hCalls );
+	undef( %hTimes );
+	undef( %hSessions );
+	undef( %hInBytes );
+	undef( %hOutBytes );
+	undef( %hInFiles );
+	undef( %hOutFiles );
+	local($cal, $ses, $time, $ibyte, $obyte, $inum, $onum, $icps, $ocps);
+	local($acal, $ases, $atime, $aibyte, $aobyte, $ainum, $aonum, $aicps, $aocps);
+	local($sys);
+        my($i);
+
+	$acal   = 0;
+	$ases   = 0;	
+	$atime  = 0;
+	$aibyte = 0;
+	$aobyte = 0;
+	$ainum  = 0;
+	$aonum  = 0;
+	$aicps  = 0;
+	$aocps  = 0;
+	
+	for( $i = 0; $i < $cnt; $i++ )
+	{
+	    $sys = $Address[$i];
+	    if( !defined($hSystems{$sys}) )
+	    {
+		$hSystems{$sys}  = 1;
+		$hCalls{$sys}    = $Calls{$sys}; $Calls{$sys} = 0;
+		$hTimes{$sys}    = 0;
+		$hSessions{$sys} = 0;
+		$hInBytes{$sys}  = 0;
+		$hOutBytes{$sys} = 0;
+		$hInFiles{$sys}  = 0;
+		$hOutFiles{$sys} = 0;
+	    }
+	    $hTimes{$sys}    += $OnLine[$i];
+	    $hSessions{$sys} += 1;
+	    $hInBytes{$sys}  += $InBytes[$i];
+	    $hOutBytes{$sys} += $OutBytes[$i];
+	    $hInFiles{$sys}  += $InFiles[$i];
+	    $hOutFiles{$sys} += $OutFiles[$i];
+	}
+	@Syst = sort( keys( %hSystems ));
+	
+	$~ = hHEADER;
+	write;
+	
+	$~ = hEACH;
+	for( $i = 0; $i <= $#Syst; $i++ )
+	{
+		$sys   = $Syst[$i];
+		$cal   = ( $hCalls{$sys} || 0 );         $acal   += $cal;
+		$ses   = $hSessions{$sys};	         $ases   += $ses;
+		$time  = sec2str($hTimes{$sys}, "long"); $atime  += $hTimes{$sys};
+		$ibyte = $hInBytes{$sys};                $aibyte += $ibyte;
+		$obyte = $hOutBytes{$sys};               $aobyte += $obyte;
+		$inum  = $hInFiles{$sys};                $ainum  += $inum;
+		$onum  = $hOutFiles{$sys};               $aonum  += $onum;
+		
+		if( $hInFiles{$sys} > 0 || $hOutFiles{$sys} > 0 )
+		{
+			$cps   = int( ($hInBytes{$sys} + $hOutBytes{$sys}) / $hTimes{$sys} );
+			$acps += $cps;
+			$sess++;
+		}
+		else
+		{
+			$cps = 0;
+		}
+		write;
+	}
+	
+	# Now, draw systems without sessions ..
+	@Syst  = sort( keys( %Calls ));
+	$ses   = "-";
+	$time  = "-";
+	$ibyte = "-";
+	$obyte = "-";
+	$inum  = "-";
+	$onum  = "-";
+	$cps   = "-";
+	for( $i = 0; $i <= $#Syst; $i++ )
+	{
+		$sys = $Syst[$i];
+		if( $Calls{$sys} )
+		{
+		    $sys = $Syst[$i];
+		    $cal = $Calls{$sys}; $acal += $cal;
+		    write;
+		}
+	}
+	$atime = sec2str($atime, "long");
+	if( $sess > 0 )
+	{
+		$acps = int( $acps / $sess );
+	}
+	else
+	{
+		$acps = 0;
+	}
+	
+	$~ = hFOOTER;
+	write;
+}
+
+sub num2siz
+{
+    my($num) = $_[0];
+    my($siz);
+    if($num < 1000) {
+	$siz = $num.' ';
+    } elsif($num < 10000000) {
+	$siz = int($num/1024).'k';
+    } else {
+	$siz = int($num/(1024*1024)).'M';
+    }
+    return $siz;
+}
+
+sub sec2str
+{
+    my($sec) = $_[0];
+    my($tip) = $_[1];
+    my ($h, $m, $s);
+    $h = int( $sec / 3600 );
+    $m = int( ($sec - $h*3600) / 60);
+    $s = int( $sec % 60 );
+    if( $tip =~ /short/ ) {
+	return sprintf("%02d:%02d", $h, $m);
+    } elsif( $tip =~ /long/ ) {
+	return sprintf("%03d:%02d:%02d", $h, $m, $s);
+    }
+}
+
+format HEADER =
+             ª”” Call    : 'I' - Incoming,  'O' - Outgoing
+             ƒª” Status  : 'U' - Unlisted,  'L' - Listed,   'P' - Protected
+             ƒƒª Session : ' ' - Success,   'A' - Aborted           
+¥¡¡¡¡¡¡¡ˆ
+ƒ   Time    ƒStaƒ      FTN      ƒ On-Line ƒ Incoming ƒ Outgoing ƒ Avg.ƒSpeedƒ
+ƒhh:mm-hh:mmƒtusƒ    Address    ƒhhh:mm:ssƒ Bytesƒ N ƒ Bytesƒ N ƒ CPS ƒ     ƒ
+–¨¨¨¨¨¨¨¨¨…
+.
+format EACH =
+ƒ@<<<<-@<<<<ƒ@<<ƒ@<<<<<<<<<<<<<<ƒ@>>>>>>>>ƒ@>>>>>ƒ@>>ƒ@>>>>>ƒ@>>ƒ@>>>>ƒ@>>>>ƒ
+$start,$finish,$stat,$addr,      $online,  $ibyte, $in,$obyte, $on,$cps, $speed
+.
+format FOOTER =
+¤ŸŸŸŸŸŸŸŸŸ
+                                          @>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+						  $Version
+.
+
+format hHEADER =           
+¥¡¡¡¡¡ˆ
+ƒ      FTN      ƒ  Total  ƒ  Time   ƒ   Incoming   ƒ   Outgoing   ƒ CPS ƒ
+ƒ    Address    ƒCal.ƒSes.ƒ On-Line ƒ  Bytes  ƒ NN ƒ  Bytes  ƒ NN ƒ     ƒ
+–¨¨¨¨¨¨¨¨…
+.
+format hEACH =
+ƒ@<<<<<<<<<<<<<<ƒ@>>>ƒ@>>>ƒ@||||||||ƒ@>>>>>>>>ƒ@>>>ƒ@>>>>>>>>ƒ@>>>ƒ@>>>>ƒ
+$sys,            $cal,$ses,$time,    $ibyte,  $inum,$obyte,   $onum,$cps
+.
+format hFOOTER =
+“”””””””””””””””•””””•””””•”””””””””•”””””””””•””””•”””””””””•””””•”””””„
+ƒ     TOTAL     ƒ@>>>ƒ@>>>ƒ@||||||||ƒ@>>>>>>>>ƒ@>>>ƒ@>>>>>>>>ƒ@>>>ƒ@>>>>ƒ
+                $acal,$ases,$atime,  $aibyte, $ainum,$aobyte,$aonum,$acps
+¤ŸŸŸŸŸŸŸŸ
+                                       @>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+					  $Version
+.

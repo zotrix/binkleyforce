@@ -1,0 +1,68 @@
+.TH BFORCE "1" "April 2003"
+.SH NAME
+Bforce \- FTN mailer
+.SH SYNOPSYS
+\fBbforce [-fmh] [-I\fIinclude\fB] [-n\fIphone\fB]\
+[-l\fIline_number\fB] [-a\fIip_address\fB] \
+[-S\fIconnect\fB] [-p\fIdevice\fB] \fP<\fInode\fP>
+.P
+\fBbforce [-ih] [-I\fIinclude\fB] [-S\fIconnect\fB] \
+\fI<tsync|yoohoo|emsi|binkp|auto>
+.P
+\fBbforce [-dh] [-C\fIconfig\fB] [-I\fIinclude\fB]
+
+.SH DESCRIPTION
+\fBbforce\fP BinkleyForce is a simple ifcico like FTN mailer. It can
+works via TCP/IP as well as on modem links.
+.SH OPTIONS
+\fB\-d\fR
+run as daemon
+.P
+\fB\-q\fR
+terminate daemon
+.P
+\fB\-i\fR
+run from inetd (for slave mode only)
+.P
+\fB\-f\fR
+ignore system's work time
+.P
+\fB\-o\fR
+starts outgoing session on stdin/stdout
+.P
+\fB-C \fIconfig\fR
+main config file name. Default is ("/etc/bforce/bforce.conf")
+.P
+\fB-I \fIconfig\fR
+additional config file name
+.P
+\fB-n \fIphone\fR
+override phone number
+.P
+\fB-l \fIline_number\fR
+call on this hidden line (default is 0) 
+.P
+\fB-a \fIip_address\fR
+override internet address
+.P
+\fB-S \fIconnect_str\fR
+connect string (for slave mode only)
+.P
+\fB-p \fIport\fR
+override modem port (must be defined in config)
+.P
+\fB-h\fR
+show help message
+.SH SEE ALSO
+bfindex(1),bfstat(1),nlookup(1)
+.SH AUTHOR
+Bforce was written by Alexander Belkin <adb@newmail.ru>, 2:5020/2120
+.P
+This manual page was written by Zhenja Kaluta <trinfo@mail.ru>
+.P
+Revision 2 by Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>
+
+This is free documentation; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2 of the License, or (at your
+option) any later version.

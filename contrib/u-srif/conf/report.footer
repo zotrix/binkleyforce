@@ -1,0 +1,27 @@
+
++-----------+----------------------+----------------------+
+|           |      Statistic       |       Limits         |
+| Period    +-------------+--------+-------------+--------+
+|           | Size        | Number | Size        | Number |
++-----------+-------------+--------+-------------+--------+
+| Day       | @%-11d,sent_day_size@ | @%-6d,sent_day_num@ | @%-11s,limit_size_day@ | @%-6s,limit_num_day@ |
++-----------+-------------+--------+-------------+--------+
+| Week      | @%-11d,sent_week_size@ | @%-6d,sent_week_num@ | @%-11s,limit_size_week@ | @%-6s,limit_num_week@ |
++-----------+-------------+--------+-------------+--------+
+| Month     | @%-11d,sent_month_size@ | @%-6d,sent_month_num@ | @%-11s,limit_size_month@ | @%-6s,limit_num_month@ |
++-----------+-------------+--------+-------------+--------+
+| Total     | @%-11d,sent_total_size@ | @%-6d,sent_total_num@ |
++-----------+-------------+--------+
+
+******************************************************************************
+File requests policy
+******************************************************************************
+
+File requests supported at 00:00-05:30 and at least 9600 speed
+
+There are aliases for file requests:
+
+FILES   - Happy Station files list
+BFORCE  - The latest version of the binkleyforce mailer
+
+Bye, call again!

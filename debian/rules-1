@@ -1,0 +1,96 @@
+#!/usr/bin/make -f
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+
+# This is the debhelper compatibility version to use.
+export DH_COMPAT=3
+
+PACKAGE = bforce
+
+ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -g
+endif
+ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+	INSTALL_PROGRAM += -s
+endif
+
+configure: 	#configure-stamp
+
+#configure-stamp:
+	dh_testdir
+	# Add here commands to configure the package.
+#	cat $(CURDIR)/source/Makefile.in | sed 's/\(^INSTALL_.*\)-o \$${OWNER} -g \$${GROUP}/\1/' > \
+#		$(CURDIR)/source/Makefile.in.new
+#	mv $(CURDIR)/source/Makefile.in.new $(CURDIR)/source/Makefile.in
+	cd source; ./configure --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --sysconfdir=/etc/bforce --with-owner=uucp --with-group=news
+	touch configure-stamp
+
+
+build: build-stamp
+
+build-stamp: configure-stamp 
+	dh_testdir
+
+	# Add here commands to compile the package.
+	$(MAKE) -C source
+#	/usr/bin/docbook-to-man debian/bforce.sgml > bforce.1
+
+	touch build-stamp
+
+#clean: unpatch
+#	dh_testdir
+#	dh_testroot
+#	rm -f build-stamp configure-stamp
+#
+#	# Add here commands to clean up after the build process.
+#	-$(MAKE) -C source clean
+#	dh_clean
+#	rm -f source/config.cache source/include/config.h source/config.log\
+#		source/config.status source/Makefile
+
+install: build
+	dh_testdir
+#	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	# Add here commands to install the package into debian/bforce.
+	$(MAKE) -C source install DESTDIR=$(CURDIR)/debian/bforce
+#	install $(CURDIR)/debian/default $(CURDIR)/debian/bforce/etc/default/bforce
+
+
+# Build architecture-independent files here.
+binary-indep: configure build install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: configure build install
+	dh_testdir
+	dh_testroot
+#	dh_installdebconf
+	dh_installdocs -X.cvsignore
+	dh_installexamples examples/*
+#	dh_installlogrotate
+	dh_installinit
+#	dh_installcron
+	dh_installman $(CURDIR)/debian/bfindex.1 $(CURDIR)/debian/bforce.1 \
+			$(CURDIR)/debian/bfstat.1 $(CURDIR)/debian/nlookup.1
+#	dh_installinfo
+	dh_installchangelogs CHANGES CHANGES.kst CHANGES.ugenk
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+	chown -R uucp:news $(CURDIR)/debian/bforce/etc/bforce
+	chown -R uucp:news $(CURDIR)/debian/bforce/var/spool/fido $(CURDIR)/debian/bforce/var/spool/bforce
+	chown -R uucp:news $(CURDIR)/debian/bforce/var/log/bforce $(CURDIR)/debian/bforce/var/run/bforce
+#	dh_makeshlibs
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure

@@ -1,0 +1,14 @@
+This package was debianized by Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com> on
+Sun,  4 Jul 2004 11:14:15 +0200.
+
+It was downloaded from  http://ugenk.bas-net.by
+
+Upstream Author(s): Alexander Belkin, 2:5020/1398.11
+		    Konstantin Stepanenkov, 2:5030/1251
+		    Evgeniy Kozhuhovskiy, 2:450/256
+
+Copyright:
+
+All programs are either under the GPL or LGPL. On Debian systems,
+the complete text of the GPL and LGPL licenses can be found in the
+/usr/share/common-licenses/GPL and /usr/share/common-licenses/LGPL files.

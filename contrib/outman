@@ -1,0 +1,366 @@
+#!/usr/bin/tclsh
+#
+# Copyright (c) 2000 by Alexander Belkin <adb@newmail.ru>
+#
+# $Id$
+#
+# Tcl script for creating polls, file requests and file attaches
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+##################
+# Program settings
+
+# Defaults for address completion
+set def_zone 2
+set def_net  5020
+set def_node 1398
+
+# Path to your main BSO directory (not implemented)
+#set bso_dir "/var/spool/ftn/out"
+
+# Path to your ASO directory
+set aso_dir "/var/spool/fido/amiga.out"
+
+# Log file name
+set logfile "/var/log/bforce/outman.log"
+
+# Uncomment this if you not need logging
+#set logfile {}
+
+################################
+# The program's body starts here
+
+set LOG {}
+
+proc stupid_user {} {
+
+	puts "Usage: outman <\[poll|freq|send]> \[options] <address> \[files]\n"
+	puts "options:"
+	puts "  -hold     set hold flavor"
+	puts "  -normal   set normal flavor (default)"
+	puts "  -crash    set crash flavor"
+	puts "  -kill     kill files after send"
+	puts "  -truncate truncate files after send"
+	puts ""
+	puts "Mail bug reports to <adb@newmail.ru>"
+	exit 1
+}
+
+proc log {str} {
+	
+	global LOG
+	global logfile
+	
+	if { $logfile != {} } {
+	
+		if { $LOG == {} } {
+			set LOG [open $logfile "a"]
+		}
+		
+		set seconds [clock seconds]
+		
+		puts $LOG "[clock format $seconds -format "%d/%m %H:%M:%S"] $str"
+		
+	}
+}
+
+proc parse_addr {str} {
+	
+	global def_zone
+	global def_net
+	global def_node
+	set zone $def_zone
+	set net $def_net
+	set node $def_node
+	set point 0
+	
+	if { [regexp "^\[0-9]+:\[0-9]+/\[0-9]+\\.?\[0-9]*$" $str] } {
+	
+		regexp "(\[0-9]+):(\[0-9]+)/(\[0-9]+)\\.?(\[0-9]*)$" $str \
+			{} zone net node point
+	
+	} elseif { [regexp "^\[0-9]+/\[0-9]+\\.?\[0-9]*$" $str] } {
+	
+		regexp "(\[0-9]+)/(\[0-9]+)\\.?(\[0-9]*)$" $str \
+			{} net node point
+			
+	} elseif { [regexp "^\[0-9]+\\.?\[0-9]*$" $str] } {
+	
+		regexp "^(\[0-9]*)\\.?(\[0-9]*)$" $str \
+			{} node point
+		
+	} elseif { [regexp "^\.\[0-9]+$" $str] } {
+	
+		regexp "^\.(\[0-9]+)$" $str \
+			{} point
+	
+	} else {
+	
+		puts "invalid address $str"
+		return {}
+		
+	}
+
+	if { $zone  == {} } { set zone [$def_zone] }
+	if { $net   == {} } { set net  [$def_net]  }
+	if { $node  == {} } { set node [$def_node] }
+	if { $point == {} } { set point 0          }
+	
+	# puts "debug: address parse '$str' -> '$zone,$net,$node,$point'"
+	
+	return "$zone $net $node $point"
+}
+
+proc addrstr {addr} {
+
+	return [lindex $addr 0]:[lindex $addr 1]/[lindex $addr 2].[lindex $addr 3]
+}
+
+#
+# TODO: support for outbounds not in the default zone
+#
+proc filename_bso {addr flavor} {
+
+	global bso_dir
+	
+	set zone  [lindex $addr 0]
+	set net   [lindex $addr 1]
+	set node  [lindex $addr 2]
+	set point [lindex $addr 3]
+	
+	if { $point } {
+		
+		set name [format "%04x%04x.pnt/%08x" $net $node $point]
+
+	} else {
+		
+		set name [format "%04x%04x" $net $node]
+
+	}
+
+	switch $flavor {
+		"bsy" {
+			return "$bso_dir/$name.bsy"
+		}
+		"freq" {
+			return "$bso_dir/$name.req"
+		}
+		"hold" {
+			return "$bso_dir/$name.hlo"
+		}
+		"crash" {
+			return "$bso_dir/$name.clo"
+		}
+		default {
+			return "$bso_dir/$name.flo"
+		}
+	}
+}
+
+proc filename_aso {addr flavor} {
+	
+	global aso_dir
+	
+	set name [lindex $addr 0].[lindex $addr 1].[lindex $addr 2].[lindex $addr 3]
+	
+	switch $flavor {
+		"bsy" {
+			return "$aso_dir/$name.bsy"
+		}
+		"freq" {
+			return "$aso_dir/$name.req"
+		}
+		"hold" {
+			return "$aso_dir/$name.hlo"
+		}
+		"crash" {
+			return "$aso_dir/$name.clo"
+		}
+		default {
+			return "$aso_dir/$name.flo"
+		}
+	}
+}
+
+proc bsy_exist {addr} {
+	
+	set bsyname [filename_aso $addr "bsy"]
+
+	if { [file exists $bsyname] } {
+		return 1
+	}
+
+	return 0
+}
+
+proc command_freq {addr files} {
+	
+	set reqname [filename_aso $addr "freq"]
+	set name {}
+
+	# puts "debug: file request name is '$reqname'"
+	
+	set REQ [open $reqname "a"]
+
+	foreach name $files {
+		puts $REQ $name
+		log "request \"$name\" from [addrstr $addr]"
+	}
+
+	close $REQ
+}
+
+proc command_poll {addr flavor} {
+	
+	set floname [filename_aso $addr $flavor]
+
+	if { ![file exists $floname] } {
+	
+		set FLO [open $floname "a"]
+		close $FLO
+		log "poll [addrstr $addr] ($flavor)"
+		
+	} else {
+		
+		log "cannot create poll for [addrstr $addr]: allready polled"
+	}
+}
+
+proc command_send {addr files flavor action} {
+
+	set floname [filename_aso $addr $flavor]
+	set name {}
+	set curdir [exec pwd]
+
+	set FLO [open $floname "a"]
+
+	foreach name $files {
+		if { [file exists $name] } {
+			
+			if { [file pathtype $name] == "relative" } {
+				if { [string match "./*" $name] } {
+					set name [string range $name 2 end]
+				}
+				set name "$curdir/$name"
+			}
+
+			log "send file \"$name\" ([file size $name] bytes) to [addrstr $addr] ($flavor)"
+			
+			switch $action {
+				"kill" {
+					puts $FLO "^$name"
+				}
+				"truncate" {
+					puts $FLO "#$name"
+				}
+				default {
+					puts $FLO "@$name"
+				}
+			}
+			
+		} else {
+
+			puts "skip file \"$name\" to [addrstr $addr]: file not exist"
+
+		}
+	}
+
+	close $FLO
+}
+
+##############################
+# The main program starts here
+
+if { $argc < 2 } {
+	stupid_user
+}
+
+set command {}
+set address {}
+set addr    {}
+set files   {}
+set flavor  "normal"
+set action  "nothing"
+
+for {set i 0} {$i < $argc} {incr i} {
+
+	set arg [lindex $argv $i]
+	
+	if { [string index $arg 0] == "-" } {
+	
+		switch [string range $arg 1 end] {
+			"hold" {
+				set flavor "hold"
+			}
+			"normal" {
+				set flavor "normal"
+			}
+			"crash" {
+				set flavor "crash"
+			}
+			"kill" {
+				set action "kill"
+			}
+			"truncate" {
+				set action "truncate"
+			}
+			default {
+				puts "unknown command line option '$arg'"
+				stupid_user
+			}
+		}
+		
+	} elseif { $command == {} } {
+		
+		set command $arg
+		
+	} elseif { $address == {} } {
+		
+		set address $arg
+		set addr [parse_addr $address]
+		if { $addr == {} } {
+			stupid_user
+		}
+	
+	} else {
+	
+		lappend files $arg
+	
+	}
+}
+
+if { $command == {} || $address == {} } {
+	stupid_user
+}
+
+if { [bsy_exist $addr] } {
+	puts "bsy file exist for address [addrstr $addr]"
+	exit 2
+}
+
+switch $command {
+	"poll" {
+		command_poll $addr $flavor
+	}
+	"freq" {
+		command_freq $addr $files
+	}
+	"send" {
+		command_send $addr $files $flavor $action
+	}
+	default {
+		puts "unknown command $command"
+		stupid_user
+	}
+}
+
+if { $LOG != {} } {
+	close $LOG
+}
+
+exit 0
+

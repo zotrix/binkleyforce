@@ -1,0 +1,67 @@
+0.22.7.kst1
+===========
+
+ * Attempt to fix warnings, when compiling with -Wall.
+ + make update -- install only binaries.
+ * Better EMSI handling, when calling to cisco.
+ + Correct ZMH support in daemon.
+ * Some fixes in contributed perl scripts.
+
+0.22.7.kst2
+===========
+
+ + Added option --with-uucp-lockdir=... to configure.
+ * Using strncpy(3) instead of strcpy(3) if possible.
+ 
+ Added patches by Maxi Rovnich @ 2:5030/872:
+ + Support for maximum 'no dialtone' count.
+ + Support for download resyncing, while checking for free space.
+ + Ignore all files, but *.pnt, *.req, *.?lo and *.?ut in BSO.
+
+0.22.7.kst3
+===========
+
+ * Compilation failed with --disable-hangup-watch-cd. Fixed.
+ + Ability to write daemon pid in file.
+ * -f option had reverse meaning. Thanks to Eugene Korovin @ 2:5080/196.72
+ + -q option terminates daemon process (only if pidfile is used).
+
+0.22.7.kst4
+===========
+ 
+ * Hydra was broken in kst2. Fixed.
+ + Bidirectional session drops only if rxcps and txcps are less than
+   mincps at the same time.
+
+0.22.7.kst5
+===========
+
+ + port tcpip patch by Serge N. Pokhodyaev @ 2:5020/1838
+ * lock fix, when outbound on not lockable filesystem.
+    Patch by Andrew Dolgov @ 2:5030/394.41
+
+0.22.7.kst6
+===========
+
+ * traffic wasn't shown if no files in boxes.
+    Patch by Alexander Shiyan @ 2:5030/39.2
+ * bfstat now correctly shows age of files.
+    Patch by Alexander Shiyan @ 2:5030/39.2
+ * logging 'undefined cmd' fixed.
+    Thanks to Pavel I.Osipov @ 2:5020/770.50
+
+0.22.8.kst7
+===========
+
+ Some changes taken from 0.22.8 by Alexander Belkin:
+ * some bugfixes
+ + new environment variable $RC (session return code)
+ + sending of EMSI_ACK every time after recving of EMSI_DAT
+ + support for nodelist IBN flag
+
+0.22.8.kst8
+===========
+
+ * fixed bug with flags CM in override
+ * fixed bug with sending HUP to daemon
+
