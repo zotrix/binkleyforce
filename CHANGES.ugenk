@@ -25,5 +25,6 @@
 =============
  + fixed problems with license (thnx to Jonathan Gonzales V. from gnu.org)
  + added nomail flag
- * project moved to sourceforge.net (projectname - binkforce)
+ - project moved to sourceforge.net (projectname - binkforce)
  + now --enable-syslog is by default! Read SYSLOG for details
+ + nodelist mask detection (see sample config for details)
