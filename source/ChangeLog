@@ -1,3 +1,7 @@
+2005-02-09  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
+
+	* bforce/nodelist.c (nodelist_open): fixed stupid memory leak.
+
 2005-01-16  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
 
 	* bforce/nodelist.c (nodelist_open): fixed mask detection
