@@ -29,3 +29,7 @@
  + now --enable-syslog is by default! Read SYSLOG for details
  + nodelist mask detection (see sample config for details)
  + contrib/outman now supports bso (thnx to Andrew Leonov @ 2:4641/500.119)
+
+0.22.8.ugenk5
+=============
+ + fixed ``got unexpected emsi sequence "EMSI_INQC816"''
