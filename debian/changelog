@@ -1,3 +1,9 @@
+bforce (0.22.8.ugenk5-4) unstable; urgency=low
+
+  * changed 'nocreate' to 'create 640 uucp news' in logrotate
+
+ -- Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>  Sun, 27 Feb 2005 10:35:08 +0200
+
 bforce (0.22.8.ugenk5-3) unstable; urgency=low
 
   * added some logfiles to logrotate
