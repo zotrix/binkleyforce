@@ -254,9 +254,6 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	char *ext; /* extension */
 	memset(&tmp, '\0', sizeof(s_nodelist));
 	char *lastname;
-	char *cutname;
-	
-	strcpy(cutname,name+strlen(name)-3);
 	/*
 	 * Select nodelist index open mode
 	 */
@@ -290,18 +287,20 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	      * example config for details) */
 	if( strcmp(name+strlen(name)-4, ".999") == 0 )
 	{
-	     int count;
-	     struct stat *tmpbuf;
 	     char *tmpseek;
 	     tmpseek = (char*) malloc(255);
-
+	     char *tmpname;
+	     tmpname = (char*) malloc(255);
+/*	     int count;
+	     struct stat *tmpbuf;
+*/
+	     
 	     /* 23.00 coming, and i am not at home :(
 	      * Later i will rewrite this part with seekdir(3)
 	      */
 	     
-	     for (count=0; count<365; count++)
+/*	     for (count=0; count<365; count++)
 	     {
-/*		  tmpseek = '\0';    */
 		  strncpy(tmpseek, dir, 255-strlen(tmpseek));
 		  if( (strcmp(&tmpseek[strlen(tmpseek)-1], DIRSEPSTR)) != 0 )
 		  {
@@ -314,8 +313,41 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 			    name = tmpseek;
 		       }
 		  
+	     } */
+/*	     free(tmpseek);*/
+
+	     struct dirent *ndir;
+	     DIR *ndirstream;
+	     if( opendir(dir) == NULL )
+	     {
+		  log("error opening nodelist directory: %s", dir);
 	     }
+	     else
+	     {
+		  *tmpname = *name;
+		  struct stat *ndfile;
+		  time_t lasttime = 0;
+		  while( (ndir = readdir(ndirstream)) != NULL )
+		  {
+		       strnxcpy(tmpseek, ndir->d_name, 255-strlen(tmpseek));
+		       tmpseek[strlen(tmpseek)-3] = '\0';
+		       tmpname[strlen(name)-3] = '\0';
+		       if( strcmp(tmpseek, tmpname) )
+		       {
+			    if( stat(tmpseek, ndfile) )
+			    {
+				 if( ndfile->st_mtime > lasttime )
+				 {
+				      lasttime = ndfile->st_mtime;
+				      strnxcpy(name, tmpname, 255-strlen(tmpseek));
+				 }
+			    }
+		       }
+		  }
+	     }
+	     free(tmpname);
 	     free(tmpseek);
+	     
 	}
 
 		strnxcpy(tmp.name_nodelist, dir, sizeof(tmp.name_nodelist));
