@@ -253,8 +253,8 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	int lockmode;
 	char *ext; /* extension */
 	memset(&tmp, '\0', sizeof(s_nodelist));
-	const char *lastname;
-	const char *cutname=name+strlen(name)-3;
+	char *lastname;
+	char *cutname=name+strlen(name)-3;
 	/*
 	 * Select nodelist index open mode
 	 */
@@ -278,17 +278,8 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	if( *name == DIRSEPCHR )
 	     /* if nodelist name contains full path */
 	{
-	     /* May be i will fix this later. I havent got much
-	      * time. Sorry :)
-	      */
-/*
-                strnxcpy(tmp.name_nodelist, name, sizeof(tmp.name_nodelist));
-		strnxcpy(tmp.name_index, name, sizeof(tmp.name_index));
-*/
-	     
 	     logerr("nodelist.c: you shold specify only filename, without path");
 	     exit(255);
-	     
 	}
 	     /* if only just a filename */
 	else
@@ -298,10 +289,8 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	if( strcmp(name+strlen(name)-4, ".999") == 0)
 	{
 	     int count;
-/*	     struct dirent *nodelistdir;*/
 	     struct stat *tmpbuf;
-/*	     nodelistdir = opendir(dir);*/
-	     const char *tmpseek;
+	     char *tmpseek = malloc(255);
 
 
 	     /* 23.00 coming, and i am not at home :(
@@ -311,24 +300,19 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	     for (count=0; count<365; count++)
 	     {
 		  tmpseek = '\0';
-		  strnxcpy(tmpseek, dir, sizeof(&tmpseek));
-		  if ((strcmp(&tmpseek[strlen(&tmpseek)-1], DIRSEPCHR)) != 0)
+		  strnxcpy(tmpseek, dir, sizeof(tmpseek));
+		  if ((strcmp(&tmpseek[strlen(tmpseek)-1], DIRSEPSTR)) != 0)
 		  {
-		       strnxcpy(&tmpseek, DIRSEPCHR, sizeof(tmpseek));
+		       strnxcpy(tmpseek, DIRSEPSTR, sizeof(tmpseek));
 		  }
-		  strnxcpy(&tmpseek, name, sizeof(&tmpseek));
-		  sprintf(&tmpseek, "%i", count);
+		  strnxcpy(tmpseek, name, sizeof(&tmpseek));
+		  sprintf(tmpseek, "%i", count);
 		       if( stat(tmpseek, tmpbuf) == 0)
 		       {
 			    name = tmpseek;
 		       }
 		  
-/*		  mydir = readdir(nodelistdir);
-		  if (stat(nodelistdir.d_name, tmpbuf) == 0)
-		      lastname = nodelistdir.d_name;
-*/
 	     }
-/*	     closedir(nodelistdir);*/
 	}
 
 		strnxcpy(tmp.name_nodelist, dir, sizeof(tmp.name_nodelist));
