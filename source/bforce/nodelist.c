@@ -290,7 +290,7 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	{
 	     int count;
 	     struct stat *tmpbuf;
-	     char *tmpseek = malloc(255);
+	     char *tmpseek;
 
 
 	     /* 23.00 coming, and i am not at home :(
