@@ -10,3 +10,4 @@
  - fix reread configs with kill -1 
  - fix debug
  - fix domains support
+ + add zlib compression
