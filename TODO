@@ -8,3 +8,4 @@
    select a line to make a call
  + add bind_ip option
  - fix Exec feature
+ + add to ``configure'' --with-syslog key
