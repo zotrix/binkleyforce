@@ -6,6 +6,9 @@
 # $Id$
 #
 
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+
 CC 		= @CC@
 INCLUDES	= -I./include
 CFLAGS		= @CFLAGS@ -fno-builtin
@@ -21,7 +24,7 @@ CONTRIBDIR	= $(SRCDIR)/../contrib
 OWNER		= @OWNER@
 GROUP		= @GROUP@
 CONFDIR		= @sysconfdir@
-BINDIR		= @prefix@/bin
+BINDIR		= @bindir@
 LOGDIR		= /var/log/bforce
 SPOOLDIR	= /var/spool/bforce
 

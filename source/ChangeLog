@@ -1,3 +1,9 @@
+2005-01-12  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
+
+	* bforce/logger.c (log): fixed working with --enable-syslog
+
+	* logger.h: fixed some warnings
+
 2005-01-11  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 
 	* nodelist.c(nodelist_open): fixed warnings
