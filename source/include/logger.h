@@ -18,7 +18,7 @@
 
 /* enable this to use syslog facility */
 
-#define USE_SYSLOG 
+/* #define USE_SYSLOG */
 
 
 
