@@ -16,15 +16,15 @@
 
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=/usr/sbin/bforce
+DAEMON=/usr/bin/bforce
 NAME=bforce
-DESC=bforce
-
+DESC="fidonet mailer"
+OWNER="uucp"
 test -x $DAEMON || exit 0
 
 # Include bforce defaults if available
-if [ -f /etc/default/bforce ] ; then
-	. /etc/default/bforce
+if [ -f /etc/default/bforce/default ] ; then
+	. /etc/default/bforce/default
 fi
 
 # We need to run bforce?
@@ -38,23 +38,19 @@ set -e
 case "$1" in
   start)
 	echo -n "Starting $DESC: "
-	start-stop-daemon --start --quiet --pidfile /var/run/$NAME.pid \
-		--exec $DAEMON -- $DAEMON_OPTS
+	su $OWNER -c "$DAEMON -d"
 	echo "$NAME."
 	;;
   stop)
 	echo -n "Stopping $DESC: "
-	start-stop-daemon --stop --quiet --pidfile /var/run/$NAME.pid \
-		--exec $DAEMON
+	su $OWNER -c "$DAEMON -q"
 	echo "$NAME."
 	;;
   restart|force-reload)
 	echo -n "Restarting $DESC: "
-	start-stop-daemon --stop --quiet --pidfile \
-		/var/run/$NAME.pid --exec $DAEMON
+	su $OWNER "$DAEMON -q"
 	sleep 1
-	start-stop-daemon --start --quiet --pidfile \
-		/var/run/$NAME.pid --exec $DAEMON -- $DAEMON_OPTS
+	su $OWNER "$DAEMON -d"
 	echo "$NAME."
 	;;
   *)
