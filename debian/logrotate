@@ -1,0 +1,41 @@
+/var/log/bforce/bf-log.ttyS0 {
+	daily
+	rotate 4
+	missingok
+	notifempty
+	compress
+	notifempty
+	create 644 uucp news
+}
+
+/var/log/bforce/bf-log.tcpip {
+	daily
+	rotate 4
+	missingok
+	notifempty
+	compress
+	notifempty
+	create 644 uucp news
+}
+
+/var/log/bforce/outman.log {
+	weekly
+	rotate 4
+	missingok
+	notifempty
+	compress
+	notifempty
+	nocreate
+}
+
+/var/log/bforce/bf-log {
+	weekly
+	rotate 4
+	missingok
+	notifempty
+	compress
+	notifempty
+	create 644 uucp news
+}
+
+
