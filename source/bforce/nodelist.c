@@ -285,41 +285,18 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 	{
 	     /* checking, if nodelist name contains mask (see
 	      * example config for details) */
+	     /* If nodelist extension == "999" then we assume that it
+	      * is a mask, and try to find the latest nodelist for
+	      * this mask. If we find it, then we change "name"
+	      * parameter.
+	      * If not, we do logeer
+	      *
+	      * TODO: as in qico, do mask-search not case-sentesive
+	      */
 	if( strcmp(name+strlen(name)-4, ".999") == 0 )
 	{
-/*	     char *tmpseek;
-	     tmpseek = (char*) malloc(MAX_NAME);
-	     char *tmpname;
-	     tmpname = (char*) malloc(MAX_NAME);*/
 	     char tmpseek[MAX_NAME];
 	     char tmpname[MAX_NAME];
-	     tmpname[0]='\0';
-	     tmpseek[0]='\0';
-/*	     int count;
-	     struct stat *tmpbuf;
-*/
-	     
-	     /* 23.00 coming, and i am not at home :(
-	      * Later i will rewrite this part with seekdir(3)
-	      */
-	     
-/*	     for (count=0; count<365; count++)
-	     {
-		  strncpy(tmpseek, dir, 255-strlen(tmpseek));
-		  if( (strcmp(&tmpseek[strlen(tmpseek)-1], DIRSEPSTR)) != 0 )
-		  {
-		       strnxcpy(tmpseek, DIRSEPSTR, 255-strlen(tmpseek));
-		  }
-		  strncpy(tmpseek, name, 255-strlen(tmpseek));
-		  sprintf(tmpseek, "%i", count);
-		       if( stat(tmpseek, tmpbuf) == 0)
-		       {
-			    name = tmpseek;
-		       }
-		  
-	     } */
-/*	     free(tmpseek);*/
-
 	     struct dirent *ndir;
 	     DIR *ndirstream;
 	     if( (ndirstream = opendir(dir)) == NULL )
@@ -329,30 +306,37 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 	     else
 	     {
 		  strncpy(tmpname, name, sizeof(tmpname));
-		  struct stat *ndfile;
-		  time_t lasttime;
+		  struct stat ndfile;
+		  time_t lasttime = 0;
 		  while( (ndir = readdir(ndirstream)) )
 		  {
 		       strncpy(tmpseek, ndir->d_name, sizeof(tmpseek));
 		       if ( strlen(tmpseek) < 3 )
 			    continue;
-		       
-		       if( strncmp(tmpseek, tmpname, (strlen(tmpseek)-3) ) == 0 )
+
+		       if( strlen(tmpseek) == strlen(tmpname) )
 		       {
-			    if( stat(tmpseek, ndfile) )
+			    if( (strncmp(tmpseek, tmpname, (strlen(tmpseek)-3) ) == 0) )
 			    {
-				 if( ndfile->st_mtime > lasttime )
+				 if( stat(tmpseek, &ndfile) )
 				 {
-				      lasttime = ndfile->st_mtime;
-				      strncpy(name, tmpseek, MAX_NAME-strlen(tmpseek));
+				      if( ndfile.st_ctime > lasttime )
+				      {
+					   lasttime = ndfile.st_ctime;
+					   strncpy(name, tmpseek, MAX_NAME-strlen(tmpseek));
+				      }
 				 }
 			    }
 		       }
 		  }
 	     }
-//	     free(tmpname);
-//	     free(tmpseek);
-	     
+	     closedir(ndirstream);
+	}
+
+	if( strcmp(name+strlen(name)-4, ".999") == 0 )
+	     /* we haven`t found any nodelist for this mask */
+	{
+	     logerr("No nodelist found for this mask: %s", name);
 	}
 
 		strnxcpy(tmp.name_nodelist, dir, sizeof(tmp.name_nodelist));
