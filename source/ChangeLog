@@ -1,14 +1,22 @@
+2005-01-12  Andrey Slusar  <anray@users.sourceforge.net>
+
+	* Makefile.in (installdirs): fix compiling when use a bsd
+	chown.
+
+	* Makefile.in (bforce/expression.c): fix compiling when use
+	a bsd make.
+
 2005-01-12  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 
 	* bforce/nodelist.c (nodelist_open): rewritten logic
 
 	* bforce/logger.c (log): fixed working with --enable-syslog
 
-	* logger.h: fixed some warnings
+	* include/logger.h: fixed some warnings
 
 2005-01-11  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 
-	* nodelist.c(nodelist_open): fixed warnings
+	* bforce/nodelist.c (nodelist_open): fixed warnings
 
 2005-01-11  Andrey Slusar  <anray@users.sourceforge.net>
 

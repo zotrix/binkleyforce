@@ -109,7 +109,7 @@ BFORCE_OBJS	= bforce/bforce.o \
 
 all:		bin/bforce bin/bfindex bin/bfstat bin/nlookup
 
-expression.c: bforce/expression.y
+bforce/expression.c: bforce/expression.y
 		$(YACC) bforce/expression.y
 		mv y.tab.c bforce/expression.c
 
@@ -168,13 +168,13 @@ installdirs:
 		if [ ! -d $(SPOOLDIR)/bt/out ]; then mkdir -p $(SPOOLDIR)/bt/out; fi
 		if [ ! -d $(SPOOLDIR)/ndl ]; then mkdir -p $(SPOOLDIR)/ndl; fi
 		if [ ! -d $(SPOOLDIR)/bforce ]; then mkdir -p $(SPOOLDIR); fi
-		chown $(OWNER).$(GROUP) $(CONFDIR)
-		chown $(OWNER).$(GROUP) $(LOGDIR)
-		chown $(OWNER).$(GROUP) $(SPOOLDIR)/bt/in
-		chown $(OWNER).$(GROUP) $(SPOOLDIR)/bt/pin
-		chown $(OWNER).$(GROUP) $(SPOOLDIR)/bt/out
-		chown $(OWNER).$(GROUP) $(SPOOLDIR)/ndl
-		chown $(OWNER).$(GROUP) $(SPOOLDIR)
+		chown $(OWNER):$(GROUP) $(CONFDIR)
+		chown $(OWNER):$(GROUP) $(LOGDIR)
+		chown $(OWNER):$(GROUP) $(SPOOLDIR)/bt/in
+		chown $(OWNER):$(GROUP) $(SPOOLDIR)/bt/pin
+		chown $(OWNER):$(GROUP) $(SPOOLDIR)/bt/out
+		chown $(OWNER):$(GROUP) $(SPOOLDIR)/ndl
+		chown $(OWNER):$(GROUP) $(SPOOLDIR)
 
 install:
 		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(SRCDIR)/bin/bforce $(BINDIR)/bforce
