@@ -12,3 +12,4 @@
  - fix debug
  - fix domains support
  + add nodelist mask support
+ - check log of tcp/ip sessions.

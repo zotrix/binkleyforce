@@ -1,3 +1,7 @@
+2005-01-11  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
+
+	* nodelist.c(nodelist_open): fixed warnings
+
 2005-01-11  Andrey Slusar  <anray@users.sourceforge.net>
 
 	* Makefile.in (CFLAGS): added -fno-builtin.
