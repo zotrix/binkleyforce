@@ -260,9 +260,9 @@ typedef enum {
 	cf_zmodem_tx_window,
 	cf_nomail_flag,
 	cf_bind_ip,
-/* #ifdef USE_SYSLOG */
+#ifdef USE_SYSLOG
 	cf_syslog_facility,
-/* #endif */
+#endif
 #ifdef DEBUG
 	cf_debug_file,
 	cf_debug_level,
