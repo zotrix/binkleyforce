@@ -2,7 +2,7 @@ Source: bforce
 Section: net
 Priority: optional
 Maintainer: Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>
-Build-Depends: debhelper (>> 3.0.0), dpatch (>= 1.11)
+Build-Depends: debhelper (>> 3.0.0), bison (>> 1.0.0)
 Standards-Version: 3.5.10
 
 Package: bforce
