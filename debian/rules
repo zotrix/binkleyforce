@@ -37,7 +37,7 @@ build-stamp: configure-stamp
 	dh_testdir
 
 # 	Add here commands to compile the package.
-	$(MAKE) -C source 2>/dev/null
+	$(MAKE) -C source
 #	/usr/bin/docbook-to-man debian/bforce.sgml > bforce.1
 
 	touch build-stamp
