@@ -20,7 +20,7 @@ CONTRIBDIR	= $(SRCDIR)/../contrib
 
 OWNER		= @OWNER@
 GROUP		= @GROUP@
-CONFDIR		= @prefix@/etc
+CONFDIR		= @sysconfdir@
 BINDIR		= @prefix@/bin
 LOGDIR		= /var/log/bforce
 SPOOLDIR	= /var/spool/bforce

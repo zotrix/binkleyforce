@@ -853,7 +853,7 @@ Optional Features:
  --enable-hangup-watch-cd hangup watchs for DCD line (default)
  --enable-log-passwd      write session password to log (default)
  --enable-csy-locks       use '.csy' locks while dialing (default)
- --enable-syslog     do not use syslog for logging experimental (default)
+ --enable-syslog		use syslog for logging experimental (default)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
