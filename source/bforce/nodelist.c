@@ -289,7 +289,7 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 	      * is a mask, and try to find the latest nodelist for
 	      * this mask. If we find it, then we change "name"
 	      * parameter.
-	      * If not, we do logeer
+	      * If not, we do logerr
 	      *
 	      * TODO: as in qico, do mask-search not case-sentesive
 	      */
@@ -307,29 +307,29 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 	     else
 	     {
 		  
-		  strncpy(tmpname, name, sizeof(tmpname));
+		  strnxcpy(tmpname, name, sizeof(tmpname));
 		  struct stat ndfile;
 		  time_t lasttime = 0;
 		  while( (ndir = readdir(ndirstream)) )
 		  {
-		       strncpy(tmpseek, ndir->d_name, sizeof(tmpseek));
+		       strnxcpy(tmpseek, ndir->d_name, sizeof(tmpseek));
 		       if ( strlen(tmpseek) < 3 )   /* Checking for */
-			    continue;     /* "." and ".." */
+			    continue;               /* "." and ".." */
 
 		       if( strlen(tmpseek) == strlen(tmpname) )
 		       {
-			    if( (strncmp(tmpseek, tmpname, (strlen(tmpseek)-3) ) == 0) )
+			    if( (strncmp(tmpseek, tmpname, strlen(tmpseek)-3 ) == 0) )
 			    {
 				 
-				 strncpy(tmpseekdir, dir, sizeof(tmpseekdir));
-				 strncat(tmpseekdir, tmpseek, sizeof(tmpseekdir));
+				 strnxcpy(tmpseekdir, dir, sizeof(tmpseekdir));
+				 strnxcat(tmpseekdir, tmpseek, sizeof(tmpseekdir));
 				 
 				 if( (stat(tmpseekdir, &ndfile)) == 0 )
 				 {
 				      if( ndfile.st_ctime > lasttime )
 				      {
 					   lasttime = ndfile.st_ctime;
-					   strncpy(name, tmpseek, MAX_NAME-strlen(tmpseek));
+					   strcpy(name, tmpseek);
 				      }
 				 }
 			    }
