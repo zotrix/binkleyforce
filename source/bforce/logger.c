@@ -336,7 +336,7 @@ int log(const char *s, ...)
 	const int LP_O = fac || LOG_DEBUG;	
 	const int log_priority = fac || LOG_ERR;
 	
-	time_string_log(timestr, sizeof(timestr), 0);
+//	time_string_log(timestr, sizeof(timestr), 0);
 	
 	va_start(args, s);
 
@@ -363,7 +363,7 @@ int logerr(const char *s, ...)
 	int fac = conf_number(cf_syslog_facility);
 	const int log_priority = fac || LOG_ERR;
 	
-	time_string_log(timestr, sizeof(timestr), 0);
+//	time_string_log(timestr, sizeof(timestr), 0);
 	
 	va_start(args, s);
 

@@ -14,6 +14,7 @@
 #ifndef _NODELIST_H_
 #define _NODELIST_H_
 
+#define MAX_NAME 255
 /*
  * Each nodelist has corresponding index file. Index file name is the
  * same as nodelist, but extension is changed to the ".bni", so index
@@ -164,5 +165,7 @@ int   nodelist_getstr(s_nodelist *nlp, size_t offset, char *buffer, size_t bufle
 int   nodelist_lookup_string(char *buffer, size_t buflen, s_faddr addr);
 int   nodelist_lookup(s_node *node, s_faddr addr);
 void  nodelist_initnode(s_node *node, s_faddr addr);
+
+
 
 #endif /* _NODELIST_H_ */
