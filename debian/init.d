@@ -27,6 +27,12 @@ if [ -f /etc/default/bforce ] ; then
 	. /etc/default/bforce
 fi
 
+# We need to run bforce?
+if [ $RUN == "no" ] ; then
+    echo "binkleyforce startup is disabled in /etc/default/bforce"
+    exit 0
+fi
+
 set -e
 
 case "$1" in
