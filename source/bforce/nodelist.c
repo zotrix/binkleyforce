@@ -313,8 +313,8 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 		  while( (ndir = readdir(ndirstream)) )
 		  {
 		       strncpy(tmpseek, ndir->d_name, sizeof(tmpseek));
-		       if ( strlen(tmpseek) < 3 )
-			    continue;
+		       if ( strlen(tmpseek) < 3 )   /* Checking for */
+			    continue;     /* "." and ".." */
 
 		       if( strlen(tmpseek) == strlen(tmpname) )
 		       {
