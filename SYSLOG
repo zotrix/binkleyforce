@@ -1,10 +1,9 @@
 Now binkleyforce supports logging to syslog (see syslogd(8) for
 details)
 
-It uses LOG_UUCP facility, LOG_PID option. LOG_ERR and LOG_NOTICE
+You can define facility; LOG_PID option, LOG_ERR and LOG_NOTICE
 levels are used.
 
-To enable it, uncomment line 19 in source/include/logger.h
-( /* #define USE_SYSLOG */ ) 
+To enable it, add -DUSE_SYSLOG to CFLAGS in Makefile
 
 TODO: add option to ``configure'' script

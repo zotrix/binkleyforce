@@ -6,7 +6,7 @@
 
 CC 		= gcc
 INCLUDES	= -I./include
-CFLAGS		= -g -O2
+CFLAGS		= -g -O2 -DUSE_SYSLOG
 LIBS 		= 
 YACC		= bison -y
 INSTALL		= /usr/bin/install -c

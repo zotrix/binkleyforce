@@ -2,7 +2,8 @@
  *	binkleyforce -- unix FTN mailer project
  *	
  *	Copyright (c) 1998-2000 Alexander Belkin, 2:5020/1398.11
- *	
+ *	Copyright (c) 2004 Evgeniy Kozhuhovskiy, 2:450/256
+ *
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
  *	the Free Software Foundation; either version 2 of the License, or
@@ -64,7 +65,7 @@ struct debuglevel {
 
 #include <syslog.h>
 
-#endif /* ifdef USE_SYSLOG */
+#endif /* USE_SYSLOG */
 
 #ifndef USE_SYSLOG
 const char *log_getfilename(int whatfor)
@@ -177,13 +178,6 @@ int log_reopen(const char *logname, const char *ext, const char *tty)
 	return log_open(logname, ext, tty);
 }
 
-/* void log_setident(const char *ident)
-{
-	if( ident )
-		strnxcpy(log_ident, ident, sizeof(log_ident));
-	else
-		*log_ident = '\0';
-} */
 
 int log(const char *s, ...)
 
@@ -297,7 +291,7 @@ int logerr(const char *s, ...)
 	return 0;
 }
 
-#endif /* ifndef USE_SYSLOG */
+#endif /* USE_SYSLOG */
 
 
 #ifdef USE_SYSLOG 
@@ -363,13 +357,6 @@ int log(const char *s, ...)
 	else
 	fprintf(log_priority, "%s [%d] ", timestr, mypid);
 
-			
-/*		vsyslog(log_priority, s, args);*/
-/*		putc('\n', log_fp); 
-		fflush(log_fp);
-
-		} */
-	
 	va_end(args);
 
 	return 0;
@@ -390,28 +377,14 @@ int logerr(const char *s, ...)
 
 	int mypid = getpid();
 		
-/*	if( log_ident[0] && log_ttyname[0] )
-	     syslog(log_priority, "%s %s.%s[%d] ", timestr, log_ident, log_ttyname, mypid);
-	else if( log_ident[0] )
-	     syslog(log_priority, "%s %s[%d] ", timestr, log_ident, mypid);
-	else if( log_ttyname[0] )
-	     fprintf(log_priority, "%s %s[%d] ", timestr, log_ttyname, mypid);
-	else
-	fprintf(log_priority, "%s [%d] ", timestr, mypid);
-*/
-			
 		vsyslog(log_priority, s, args);
-/*		putc('\n', log_fp); 
-		fflush(log_fp);
-
-		} */
 	
 	va_end(args);
 
 	return 0;
 }
 
-#endif /* ifdef USE_SYSLOG */
+#endif /* USE_SYSLOG */
 
 
 /*
@@ -530,7 +503,7 @@ int debug_close(void)
 	if( debug_fp )
 	{
 		fprintf(debug_fp, "****************************************************\n");
-		fprintf(debug_fp, " Closing Binkley-Force debug file at %s\n",
+		fprintf(debug_fp, " Closing binkleyforce debug file at %s\n",
 			time_string_long(buf, sizeof(buf), 0));
 		fprintf(debug_fp, "****************************************************\n");
 		

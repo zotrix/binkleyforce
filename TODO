@@ -7,5 +7,8 @@
    smart means (1) write time stat for every line and (2) evenly
    select a line to make a call
  + add bind_ip option
- - fix Exec feature
+ - fix Exec features
  + add to ``configure'' --with-syslog key
+ - fix reread configs with kill -1 
+ - fix debug
+ - fix domains support
