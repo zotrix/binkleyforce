@@ -11,5 +11,5 @@
  - fix reread configs with kill -1 
  - fix debug
  - fix domains support
- + add nodelist mask support
+ - [fixed]add nodelist mask support; fix conf_deinit.c:conf_deinit:free
  - check log of tcp/ip sessions.
