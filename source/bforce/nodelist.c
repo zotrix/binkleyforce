@@ -254,7 +254,9 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	char *ext; /* extension */
 	memset(&tmp, '\0', sizeof(s_nodelist));
 	char *lastname;
-	char *cutname=name+strlen(name)-3;
+	char *cutname;
+	
+	strcpy(cutname,name+strlen(name)-3);
 	/*
 	 * Select nodelist index open mode
 	 */
@@ -286,12 +288,12 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	{
 	     /* checking, if nodelist name contains mask (see
 	      * example config for details) */
-	if( strcmp(name+strlen(name)-4, ".999") == 0)
+	if( strcmp(name+strlen(name)-4, ".999") == 0 )
 	{
 	     int count;
 	     struct stat *tmpbuf;
 	     char *tmpseek;
-
+	     tmpseek = (char*) malloc(255);
 
 	     /* 23.00 coming, and i am not at home :(
 	      * Later i will rewrite this part with seekdir(3)
@@ -299,13 +301,13 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	     
 	     for (count=0; count<365; count++)
 	     {
-		  tmpseek = '\0';
-		  strnxcpy(tmpseek, dir, sizeof(tmpseek));
-		  if ((strcmp(&tmpseek[strlen(tmpseek)-1], DIRSEPSTR)) != 0)
+/*		  tmpseek = '\0';    */
+		  strncpy(tmpseek, dir, 255-strlen(tmpseek));
+		  if( (strcmp(&tmpseek[strlen(tmpseek)-1], DIRSEPSTR)) != 0 )
 		  {
-		       strnxcpy(tmpseek, DIRSEPSTR, sizeof(tmpseek));
+		       strnxcpy(tmpseek, DIRSEPSTR, 255-strlen(tmpseek));
 		  }
-		  strnxcpy(tmpseek, name, sizeof(&tmpseek));
+		  strnxcpy(tmpseek, name, 255-strlen(tmpseek));
 		  sprintf(tmpseek, "%i", count);
 		       if( stat(tmpseek, tmpbuf) == 0)
 		       {
@@ -313,6 +315,7 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 		       }
 		  
 	     }
+	     free(tmpseek);
 	}
 
 		strnxcpy(tmp.name_nodelist, dir, sizeof(tmp.name_nodelist));
