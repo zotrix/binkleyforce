@@ -295,7 +295,7 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	{
 	     /* checking, if nodelist name contains mask (see
 	      * example config for details) */
-	if( strcmp(name+strlen(name)-3, "999") == 0)
+	if( strcmp(name+strlen(name)-4, ".999") == 0)
 	{
 	     int count;
 /*	     struct dirent *nodelistdir;*/
