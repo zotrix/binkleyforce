@@ -155,7 +155,7 @@ s_node;
 int   nodelist_checkflag(const char *nodeflags, const char *flag);
 int   nodelist_keywordval(const char *keyword);
 int   nodelist_parsestring(s_node *node, char *str);
-s_nodelist *nodelist_open(const char *dir, const char *name, int mode);
+s_nodelist *nodelist_open(const char *dir, char *name, int mode);
 int   nodelist_checkheader(s_nodelist *nlp);
 int   nodelist_createheader(s_nodelist *nlp);
 int   nodelist_close(s_nodelist *nlp);
