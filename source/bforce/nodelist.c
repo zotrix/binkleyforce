@@ -252,8 +252,8 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 	const char *openmode;
 	int lockmode;
 	char *ext; /* extension */
-	memset(&tmp, '\0', sizeof(s_nodelist));
 	char *lastname;
+	memset(&tmp, '\0', sizeof(s_nodelist));
 	/*
 	 * Select nodelist index open mode
 	 */
@@ -298,6 +298,8 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 	     char tmpseek[MAX_NAME];
 	     char tmpseekdir[MAX_NAME];
 	     char tmpname[MAX_NAME];
+   	     struct stat ndfile;
+	     time_t lasttime = 0;
 	     struct dirent *ndir;
 	     DIR *ndirstream;
 	     if( (ndirstream = opendir(dir)) == NULL )
@@ -308,8 +310,8 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 	     {
 		  
 		  strnxcpy(tmpname, name, sizeof(tmpname));
-		  struct stat ndfile;
-		  time_t lasttime = 0;
+
+
 		  while( (ndir = readdir(ndirstream)) )
 		  {
 		       strnxcpy(tmpseek, ndir->d_name, sizeof(tmpseek));
