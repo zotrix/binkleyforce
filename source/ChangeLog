@@ -1,3 +1,10 @@
+2005-02-20  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
+
+	* bforce/sess_answ.c (answ_system): fixed bug with loggin inbound
+	tcpip sessions
+
+	* bforce/logger.c (log_getfilename): fixed possible bug
+
 2005-02-17  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 
 	* configure.in: fixed --with-owner and --with-group
