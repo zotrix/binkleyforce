@@ -425,6 +425,17 @@ void session_set_freqs_status(void)
 void session_set_send_options(void)
 {
 	const long options = conf_options(cf_options);
+
+	const char *flagname = conf_string(cf_nomail_flag);
+	struct stat *buf;
+	if (flagname != NULL)
+	{
+	     if( stat( flagname, buf) == 0 )
+		  {
+		       state.sopts.holdall = 1;
+		       state.sopts.holdhold = 1;
+		  }
+	 }
 	
 	if( state.caller == FALSE )
 		state.sopts.holdreq = 1;
