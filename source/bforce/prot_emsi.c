@@ -419,6 +419,10 @@ static int sm_rx_waitseq(s_rx_emsidat *d)
 					 */
 					return SM3;
 				}
+				else if( !strncasecmp(d->buf, "EMSI_INQC816", 12) )
+				{
+				        return SM2;
+				}
 				else
 				{
 					DEB((D_HSHAKE, "got unexpected emsi sequence: \"%s\"",
