@@ -26,43 +26,47 @@ OWNER='uucp'
 GROUP='news'
 AC_ARG_WITH(owner, dnl
   --with-owner=USER       set possibility to run bforce from a USER (uucp),
-            )
+  [OWNER=$with_owner
+            ])
 AC_SUBST(OWNER)
 AC_ARG_WITH(group, dnl
   --with-group=GROUP       set possibility to run bforce from a GROUP (news),
-            )
+  [GROUP=$with_group
+            ])
 AC_SUBST(GROUP)
 
 
 AC_ARG_ENABLE(debug,           [ --enable-debug           enable debugging support (default)],
 	[if test $enableval = yes; then
-		AC_DEFINE(DEBUG)
-	fi], [AC_DEFINE(DEBUG)])
+		AC_DEFINE([DEBUG], [1], [Enable debugging support])
+	fi], [AC_DEFINE([DEBUG], [1], [Enable debugging support])])
 
+	 
 AC_ARG_ENABLE(dcd-control,     [ --enable-watch-cd        enable DCD line control (default)],
 	[if test $enableval = yes; then
-		AC_DEFINE(MODEM_WATCH_CARRIER)
-	fi], [AC_DEFINE(MODEM_WATCH_CARRIER)])
+		AC_DEFINE([MODEM_WATCH_CARRIER], [1], [enable DCD line control])
+	fi], [AC_DEFINE([MODEM_WATCH_CARRIER], [1], [enable DCD line control])])
+
 
 AC_ARG_ENABLE(hangup-watch-cd, [ --enable-hangup-watch-cd hangup watchs for DCD line (default)],
 	[if test $enableval = yes; then
-		AC_DEFINE(MODEM_HANGUP_WATCH_CARRIER)
-	fi], [AC_DEFINE(MODEM_HANGUP_WATCH_CARRIER)])
+		AC_DEFINE([MODEM_HANGUP_WATCH_CARRIER], [1], [Hangup watchs for DCD line])
+	fi], [AC_DEFINE([MODEM_HANGUP_WATCH_CARRIER], [1], [Hangup watchs for DCD line])])
 
 AC_ARG_ENABLE(log-passwd,      [ --enable-log-passwd      write session password to log (default)],
 	[if test $enableval = yes; then
-		AC_DEFINE(BFORCE_LOG_PASSWD)
-	fi], [AC_DEFINE(BFORCE_LOG_PASSWD)])
+		AC_DEFINE([BFORCE_LOG_PASSWD], [1], [Write session password to log])
+	fi], [AC_DEFINE([BFORCE_LOG_PASSWD], [1], [Write session password to log])])
 
 AC_ARG_ENABLE(csy-locks,       [ --enable-csy-locks       use '.csy' locks while dialing (default)],
 	[if test $enableval = yes; then
-		AC_DEFINE(BFORCE_USE_CSY)
-	fi], [AC_DEFINE(BFORCE_USE_CSY)])
-
+		AC_DEFINE([BFORCE_USE_CSY], [1], [Use '.csy' locks while dialing])
+	fi], [AC_DEFINE([BFORCE_USE_CSY], [1], [Use '.csy' locks while dialing])])
+	 
 AC_ARG_ENABLE(syslog,       [ --enable-syslog		use syslog for logging [experimental] (default)],
 	[if test $enableval = yes; then
-		AC_DEFINE(USE_SYSLOG)
-	fi], [AC_DEFINE(USE_SYSLOG)])
+		AC_DEFINE([USE_SYSLOG], [1], [Use syslog for logging])
+	fi], [AC_DEFINE([USE_SYSLOG], [1], [Use syslog for logging])])
 
 AC_ARG_WITH(uucp-lockdir,       [ --with-uucp-lockdir      specify directory for UUCP style locks],
 	[AC_DEFINE_UNQUOTED(BFORCE_LOCK_DIR, "$withval")],
@@ -74,8 +78,8 @@ AC_ARG_WITH(uucp-lockdir,       [ --with-uucp-lockdir      specify directory for
 	else
 	        lockdir=/var/lock/
 	fi
-	AC_DEFINE_UNQUOTED(BFORCE_LOCK_DIR, "$lockdir")
-	AC_MSG_RESULT("$lockdir")
+	AC_DEFINE_UNQUOTED([BFORCE_LOCK_DIR], ["$lockdir"], [Directory for UUCP style locks])
+	AC_MSG_RESULT($lockdir)
 	])
 
 dnl Checks for programs.
@@ -107,7 +111,7 @@ AC_PROG_GCC_TRADITIONAL
 AC_FUNC_SETVBUF_REVERSED
 AC_TYPE_SIGNAL
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS(mkdir mktime select socket strspn strcasecmp)
+AC_CHECK_FUNCS(mkdir mktime select socket strspn strcasecmp mkstemp)
 AC_CHECK_FUNCS(rename statfs statvfs setproctitle)
 
 AC_OUTPUT(Makefile)
