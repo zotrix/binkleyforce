@@ -1,5 +1,7 @@
 2005-01-11  Andrey Slusar  <anray@users.sourceforge.net>
 
+	* Makefile.in (CFLAGS): added -fno-builtin.
+
 	* bforce/nodelist.c (nodelist_checkheader): small fixes.
 
 2005-01-10  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>

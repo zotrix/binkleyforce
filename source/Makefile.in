@@ -8,7 +8,7 @@
 
 CC 		= @CC@
 INCLUDES	= -I./include
-CFLAGS		= @CFLAGS@
+CFLAGS		= @CFLAGS@ -fno-builtin
 LIBS 		= @LIBS@
 YACC		= @YACC@
 INSTALL		= @INSTALL@
