@@ -61,12 +61,6 @@ struct debuglevel {
 };
 #endif /* DEBUG */
 
-#ifdef USE_SYSLOG
-
-#include <syslog.h>
-
-#endif /* USE_SYSLOG */
-
 #ifndef USE_SYSLOG
 const char *log_getfilename(int whatfor)
 {

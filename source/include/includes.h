@@ -125,6 +125,10 @@
 #include <sys/select.h>
 #endif
 
+#ifdef USE_SYSLOG
+#include <syslog.h>
+#endif
+
 /*
  *  Include OS dependent information
  */
