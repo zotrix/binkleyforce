@@ -1,3 +1,7 @@
+2005-01-16  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
+
+	* bforce/nodelist.c (nodelist_open): fixed mask detection
+
 2005-01-12  Andrey Slusar  <anray@users.sourceforge.net>
 
 	* Makefile.in (installdirs): fix compiling when use a bsd
