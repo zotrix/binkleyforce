@@ -243,6 +243,7 @@ typedef enum {
 	cf_rescan_delay,
 	cf_run_after_handshake,
 	cf_run_after_session,
+	cf_run_before_session,
 	cf_session_limit_in,
 	cf_session_limit_out,
 	cf_skip_files_recv,

@@ -196,6 +196,19 @@ int call_system_quiet(const char *connstr, bool inet)
 	int rc = 0;
 	char *p;
 
+	
+	char *exec_cmd;
+	int exec_result;
+
+	if( (exec_cmd = conf_string(cf_run_before_session)) != NULL )
+	{
+	     exec_result = system(exec_cmd);
+	     if( exec_result = 0  )
+		  log("external application %s executed with zero return code (%i)", exec_cmd, exec_result);
+	     else
+		  logerr("external application %s executed with non-zero return code %i", exec_cmd, exec_result);
+	}
+	
 	/*
 	 * Set verbal line name
 	 */

@@ -177,7 +177,7 @@ int tcpip_init(void)
 	tty_abort  = FALSE;
 	tty_hangup = FALSE;
 	tty_modem  = FALSE;
-	
+
 	/*
 	 * Set sockets I/O to the non-blocking mode
 	 */

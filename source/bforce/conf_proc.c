@@ -149,6 +149,7 @@ s_conf_entry bforce_config[BFORCE_NUMBER_OF_KEYWORDS+1] = {
 	CONF_KEY(rescan_delay,               CT_NUMBER),
 	CONF_KEY(run_after_handshake,        CT_STRING),
 	CONF_KEY(run_after_session,          CT_STRING),
+	CONF_KEY(run_before_session,         CT_STRING),
 	CONF_KEY(session_limit_in,           CT_NUMBER),
 	CONF_KEY(session_limit_out,          CT_NUMBER),
 	CONF_KEY(skip_files_recv,            CT_STRING),

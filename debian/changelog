@@ -1,3 +1,9 @@
+bforce (0.22.8.ugenk5-1) unstable; urgency=low
+
+  * Initial release from upstream
+
+ -- Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>  Sat, 12 Feb 2005 18:48:42 +0200
+
 bforce (0.22.8.ugenk4-2) unstable; urgency=low
 
   * added checking of /etc/default/bforce in init.d script
