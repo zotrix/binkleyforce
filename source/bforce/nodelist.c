@@ -288,9 +288,9 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	if( strcmp(name+strlen(name)-4, ".999") == 0 )
 	{
 	     char *tmpseek;
-	     tmpseek = (char*) malloc(255);
+	     tmpseek = (char*) malloc(MAX_NAME);
 	     char *tmpname;
-	     tmpname = (char*) malloc(255);
+	     tmpname = (char*) malloc(MAX_NAME);
 /*	     int count;
 	     struct stat *tmpbuf;
 */
@@ -318,28 +318,28 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 
 	     struct dirent *ndir;
 	     DIR *ndirstream;
-	     if( opendir(dir) == NULL )
+	     if( (ndirstream = opendir(dir)) == NULL )
 	     {
 		  log("error opening nodelist directory: %s", dir);
 	     }
 	     else
 	     {
-		  *tmpname = *name;
+		  strnxcpy(tmpname, name, MAX_NAME-strlen(name));
 		  struct stat *ndfile;
 		  time_t lasttime = 0;
-		  while( (ndir = readdir(ndirstream)) != NULL )
+		  while( (ndir = readdir(ndirstream)) )
 		  {
-		       strnxcpy(tmpseek, ndir->d_name, 255-strlen(tmpseek));
+		       strnxcpy(tmpseek, ndir->d_name, MAX_NAME-strlen(tmpseek));
 		       tmpseek[strlen(tmpseek)-3] = '\0';
 		       tmpname[strlen(name)-3] = '\0';
-		       if( strcmp(tmpseek, tmpname) )
+		       if( strncmp(tmpseek, tmpname, MAX_NAME-strlen(tmpseek)) )
 		       {
 			    if( stat(tmpseek, ndfile) )
 			    {
 				 if( ndfile->st_mtime > lasttime )
 				 {
 				      lasttime = ndfile->st_mtime;
-				      strnxcpy(name, tmpname, 255-strlen(tmpseek));
+				      strnxcpy(name, tmpname, MAX_NAME-strlen(tmpseek));
 				 }
 			    }
 		       }
