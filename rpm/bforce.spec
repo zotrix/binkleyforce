@@ -1,7 +1,7 @@
 Summary: Bforce, Fidonet mailer
 Name: bforce
 Version: 0.22.8
-Release: ugenk2
+Release: ugenk4
 Copyright: GPL
 Group: Fidonet/mailer
 Source0: bforce-%{version}.%{release}.tar.gz
@@ -49,7 +49,8 @@ install -m755 -o uucp -g news contrib/outman	$RPM_BUILD_ROOT/usr/bin/outman
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%doc README README.kst CHANGES CHANGES.kst COPYING INSTALL.ru README.ugenk
+%doc README README.kst CHANGES CHANGES.kst CHANGES.ugenk COPYING INSTALL.ru README.ugenk SYSLOG TODO
+%defattr(-, root, root)
 
 %attr(550,uucp,news) /usr/bin/bforce
 %attr(550,uucp,news) /usr/bin/bfindex
@@ -65,6 +66,4 @@ rm -rf $RPM_BUILD_ROOT
 %config %attr(600,uucp,news) /etc/bforce/bforce.passwd.sample
 %config %attr(600,uucp,news) /etc/bforce/freq.aliases.sample
 %config %attr(600,uucp,news) /etc/bforce/freq.dirs.sample
-
-
 
