@@ -1,3 +1,7 @@
+2005-02-21  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
+
+	* bforce/sess_answ.c (answ_system): fixed deiniting of tcpip port
+
 2005-02-20  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 
 	* bforce/sess_answ.c (answ_system): fixed bug with loggin inbound
