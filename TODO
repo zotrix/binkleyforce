@@ -6,7 +6,6 @@
  + [io_modem.c] add random and smart algorythms selecting of tty.
    smart means (1) write time stat for every line and (2) evenly
    select a line to make a call
- + add bind_ip option
  - fix Exec features
  - fix reread configs with kill -1 
  - fix debug
