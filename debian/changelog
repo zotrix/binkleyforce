@@ -1,3 +1,9 @@
+bforce (0.22.8.ugenk4-2) unstable; urgency=low
+
+  * added checking of /etc/default/bforce in init.d script
+
+ -- Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>  Fri, 11 Feb 2005 00:01:33 +0200
+
 bforce (0.22.8.ugenk4-1) unstable; urgency=low
 
   * New upstream release
