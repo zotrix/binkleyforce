@@ -1,5 +1,7 @@
 2005-01-12  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 
+	* bforce/nodelist.c (nodelist_open): rewritten logic
+
 	* bforce/logger.c (log): fixed working with --enable-syslog
 
 	* logger.h: fixed some warnings
