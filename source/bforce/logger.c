@@ -348,8 +348,6 @@ int log(const char *s, ...)
 	     syslog(LP_A, "%s %s[%d] ", timestr, log_ident, mypid);
 	else if( log_ttyname[0] )
 	     syslog(LP_O, "%s %s[%d] ", timestr, log_ttyname, mypid);
-	else
-	fprintf(log_priority, "%s [%d] ", timestr, mypid);
 
 	va_end(args);
 
