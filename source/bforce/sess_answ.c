@@ -115,7 +115,7 @@ int answ_system(e_session type, char *connstr, int inetd)
 		
 		rc = session();
 		
-		if( !inetd )
+		if( (inetd != 0) && (state.inet = FALSE) )
 		{
 			port_deinit(0, &oldtio);
 			port_close();
