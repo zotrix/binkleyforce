@@ -1,3 +1,18 @@
+bforce (0.22.8.ugenk5-3) unstable; urgency=low
+
+  * added some logfiles to logrotate
+
+ -- Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>  Wed, 16 Feb 2005 09:14:20 +0200
+
+bforce (0.22.8.ugenk5-2) unstable; urgency=low
+
+  * fixed init.d script
+  * updated manual pages
+  * added logrotate
+
+
+ -- Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>  Sun, 13 Feb 2005 10:40:50 +0200
+
 bforce (0.22.8.ugenk5-1) unstable; urgency=low
 
   * Initial release from upstream
