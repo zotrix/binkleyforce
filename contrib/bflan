@@ -23,7 +23,7 @@ $news_header  = "From: Statistic Robot <postmaster\@fido.xxx.local>\n".
 	{
 		print $news_header;
 		print "\n";
-		print "\"$system_name\" statistic from <$TimeFirst> to <$TimeLast>\n";
+		print "\"$station_name\" statistic from <$TimeFirst> to <$TimeLast>\n";
 		print "\n";		
     	&TotalStatistic();
     	print "\n";
@@ -113,17 +113,10 @@ sub ReadLog
 	
 	if( ($start == 1) && ($Pid eq $MySexyPid) )
 	{
-	    if( $Text =~ /^remote is password protected system/ )
-	    {
-		$Status[$cnt] = "P";
-	    }
-	    elsif( $Text =~ /^remote is listed system/ )
-	    {
-		$Status[$cnt] = "L";
-	    }
-	    elsif( $Text =~ /^remote is unlisted system/ )
-	    {
-		$Status[$cnt] = "U";
+	    if( $Text =~ /^remote is (\w+),(\w+)$/ ) {
+        my $stat_ = $1;
+        my $sec_  = $2;
+        $Status[$cnt] = (  $stat_ eq "listed"  ? "L" : "U" ) . ( $sec_ eq "protected" ? "P" : "N" );
 	    }
 	    elsif( $Text =~ /^[ \t]*Address :/ )
 	    {
@@ -346,20 +339,20 @@ sub sec2str
 }
 
 format HEADER =
-             ª”” Call    : 'I' - Incoming,  'O' - Outgoing
-             ƒª” Status  : 'U' - Unlisted,  'L' - Listed,   'P' - Protected
-             ƒƒª Session : ' ' - Success,   'A' - Aborted           
-¥¡¡¡¡¡¡¡ˆ
-ƒ   Time    ƒStaƒ      FTN      ƒ On-Line ƒ Incoming ƒ Outgoing ƒ Avg.ƒSpeedƒ
-ƒhh:mm-hh:mmƒtusƒ    Address    ƒhhh:mm:ssƒ Bytesƒ N ƒ Bytesƒ N ƒ CPS ƒ     ƒ
-–¨¨¨¨¨¨¨¨¨…
+   ª”” Call    : 'I' - Incoming, 'O' - Outgoing
+   ƒª” Status  : 'U' - Unlisted, 'L' - Listed, 'P' - Protected, 'N' - UnProtected
+   ƒƒª Session : ' ' - Success,  'A' - Aborted           
+¥¡¡¡¡¡¡¡ˆ
+ƒ   Time    ƒSta ƒ      FTN      ƒ On-Line ƒ Incoming ƒ Outgoing ƒ Avg.ƒSpeedƒ
+ƒhh:mm-hh:mmƒtus ƒ    Address    ƒhhh:mm:ssƒ Bytesƒ N ƒ Bytesƒ N ƒ CPS ƒ     ƒ
+–¨¨¨¨¨¨¨¨¨…
 .
 format EACH =
-ƒ@<<<<-@<<<<ƒ@<<ƒ@<<<<<<<<<<<<<<ƒ@>>>>>>>>ƒ@>>>>>ƒ@>>ƒ@>>>>>ƒ@>>ƒ@>>>>ƒ@>>>>ƒ
+ƒ@<<<<-@<<<<ƒ@<<<ƒ@<<<<<<<<<<<<<<ƒ@>>>>>>>>ƒ@>>>>>ƒ@>>ƒ@>>>>>ƒ@>>ƒ@>>>>ƒ@>>>>ƒ
 $start,$finish,$stat,$addr,      $online,  $ibyte, $in,$obyte, $on,$cps, $speed
 .
 format FOOTER =
-¤ŸŸŸŸŸŸŸŸŸ
+¤ŸŸŸŸŸŸŸŸŸ
                                           @>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 						  $Version
 .
