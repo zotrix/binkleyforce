@@ -27,7 +27,7 @@ configure-stamp:
 #	cat $(CURDIR)/source/Makefile.in | sed 's/\(^INSTALL_.*\)-o \$${OWNER} -g \$${GROUP}/\1/' > \
 #		$(CURDIR)/source/Makefile.in.new
 #	mv $(CURDIR)/source/Makefile.in.new $(CURDIR)/source/Makefile.in
-	cd source; ./configure --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --sysconfdir=/etc/bforce -with-user=uucp --with-group=news --disable-syslog
+	cd source; ./configure --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --sysconfdir=/etc/bforce -with-user=uucp --with-group=news --disable-syslog --disable-log-passwd
 	touch configure-stamp
 
 
