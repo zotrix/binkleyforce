@@ -1,4 +1,8 @@
-2005-02-10  Evgeniy Kozhuhovskiy  <Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>>
+2005-02-12  Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>
+
+	* outman: added bso support
+
+2005-02-10  Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>
 
 	* bforce.conf: added nodelist mask examples
 
