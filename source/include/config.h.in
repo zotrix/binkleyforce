@@ -59,6 +59,9 @@
 /* Path to the UUCP lock files directory */
 #undef BFORCE_LOCK_DIR
 
+/* Do you want to use syslog? */
+#undef USE_SYSLOG
+
 /* Do you want use .csy locks? */
 #undef BFORCE_USE_CSY
 
