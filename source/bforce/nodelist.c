@@ -246,7 +246,7 @@ int nodelist_parsestring(s_node *node, char *str)
  * 	pointer to the allocated nodelist structure (will be used with all
  * 	nodelist operations), and NULL to indicate errors.
  */
-s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
+s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 {
 	s_nodelist tmp;
 	const char *openmode;
@@ -287,10 +287,14 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	      * example config for details) */
 	if( strcmp(name+strlen(name)-4, ".999") == 0 )
 	{
-	     char *tmpseek;
+/*	     char *tmpseek;
 	     tmpseek = (char*) malloc(MAX_NAME);
 	     char *tmpname;
-	     tmpname = (char*) malloc(MAX_NAME);
+	     tmpname = (char*) malloc(MAX_NAME);*/
+	     char tmpseek[MAX_NAME];
+	     char tmpname[MAX_NAME];
+	     tmpname[0]='\0';
+	     tmpseek[0]='\0';
 /*	     int count;
 	     struct stat *tmpbuf;
 */
@@ -306,7 +310,7 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 		  {
 		       strnxcpy(tmpseek, DIRSEPSTR, 255-strlen(tmpseek));
 		  }
-		  strnxcpy(tmpseek, name, 255-strlen(tmpseek));
+		  strncpy(tmpseek, name, 255-strlen(tmpseek));
 		  sprintf(tmpseek, "%i", count);
 		       if( stat(tmpseek, tmpbuf) == 0)
 		       {
@@ -324,29 +328,30 @@ s_nodelist *nodelist_open(const char *dir, const char *name, int mode)
 	     }
 	     else
 	     {
-		  strnxcpy(tmpname, name, MAX_NAME-strlen(name));
+		  strncpy(tmpname, name, sizeof(tmpname));
 		  struct stat *ndfile;
-		  time_t lasttime = 0;
+		  time_t lasttime;
 		  while( (ndir = readdir(ndirstream)) )
 		  {
-		       strnxcpy(tmpseek, ndir->d_name, MAX_NAME-strlen(tmpseek));
-		       tmpseek[strlen(tmpseek)-3] = '\0';
-		       tmpname[strlen(name)-3] = '\0';
-		       if( strncmp(tmpseek, tmpname, MAX_NAME-strlen(tmpseek)) )
+		       strncpy(tmpseek, ndir->d_name, sizeof(tmpseek));
+		       if ( strlen(tmpseek) < 3 )
+			    continue;
+		       
+		       if( strncmp(tmpseek, tmpname, (strlen(tmpseek)-3) ) == 0 )
 		       {
 			    if( stat(tmpseek, ndfile) )
 			    {
 				 if( ndfile->st_mtime > lasttime )
 				 {
 				      lasttime = ndfile->st_mtime;
-				      strnxcpy(name, tmpname, MAX_NAME-strlen(tmpseek));
+				      strncpy(name, tmpseek, MAX_NAME-strlen(tmpseek));
 				 }
 			    }
 		       }
 		  }
 	     }
-	     free(tmpname);
-	     free(tmpseek);
+//	     free(tmpname);
+//	     free(tmpseek);
 	     
 	}
 
