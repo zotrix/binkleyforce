@@ -1,0 +1,4 @@
+2005-01-10  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
+
+	* nodelist.c(nodelist_open): added mask detection 
+	
