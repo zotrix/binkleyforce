@@ -8,7 +8,6 @@
    select a line to make a call
  + add bind_ip option
  - fix Exec features
- + add to ``configure'' --with-syslog key
  - fix reread configs with kill -1 
  - fix debug
  - fix domains support
