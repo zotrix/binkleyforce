@@ -176,15 +176,22 @@ installdirs:
 		chown $(OWNER):$(GROUP) $(SPOOLDIR)/ndl
 		chown $(OWNER):$(GROUP) $(SPOOLDIR)
 
-install:
+install-bin:
 		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(SRCDIR)/bin/bforce $(BINDIR)/bforce
 		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(SRCDIR)/bin/bfindex $(BINDIR)/bfindex
 		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(SRCDIR)/bin/bfstat $(BINDIR)/bfstat
 		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(SRCDIR)/bin/nlookup $(BINDIR)/nlookup
-		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(CONTRIBDIR)/outman $(BINDIR)/outman
+
+install-config:
 		$(INSTALL_DATA) -o $(OWNER) -g $(GROUP) $(SRCDIRCONF)/bforce.conf $(CONFDIR)/bforce.conf.sample
 		$(INSTALL_DATA) -o $(OWNER) -g $(GROUP) $(SRCDIRCONF)/bforce.subst $(CONFDIR)/bforce.subst.sample
 		$(INSTALL_DATA) -o $(OWNER) -g $(GROUP) $(SRCDIRCONF)/bforce.passwd $(CONFDIR)/bforce.passwd.sample
 		$(INSTALL_DATA) -o $(OWNER) -g $(GROUP) $(SRCDIRCONF)/freq.aliases $(CONFDIR)/freq.aliases.sample
 		$(INSTALL_DATA) -o $(OWNER) -g $(GROUP) $(SRCDIRCONF)/freq.dirs $(CONFDIR)/freq.dirs.sample
+
+install-contrib:
+		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(CONTRIBDIR)/outman $(BINDIR)/outman
 		@echo "Please, edit $(BINDIR)/outman"
+
+install:	install-bin install-config
+
