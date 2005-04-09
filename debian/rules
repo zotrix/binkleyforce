@@ -11,7 +11,8 @@ export DH_COMPAT=3
 
 PACKAGE = bforce
 
-
+USER = uucp
+GROUP = news
 
 ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -g
@@ -27,7 +28,7 @@ configure-stamp:
 #	cat $(CURDIR)/source/Makefile.in | sed 's/\(^INSTALL_.*\)-o \$${OWNER} -g \$${GROUP}/\1/' > \
 #		$(CURDIR)/source/Makefile.in.new
 #	mv $(CURDIR)/source/Makefile.in.new $(CURDIR)/source/Makefile.in
-	cd source; ./configure --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --sysconfdir=/etc/bforce -with-user=uucp --with-group=news --disable-syslog --disable-log-passwd
+	cd source; ./configure --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --sysconfdir=/etc/bforce -with-user=$(USER) --with-group=$(GROUP) --disable-syslog --disable-log-passwd
 	touch configure-stamp
 
 
@@ -62,18 +63,20 @@ install: build
 #	Add here commands to install the package into debian/bforce.
 #	$(MAKE) -C source install DESTDIR=$(CURDIR)/debian/bforce/
 #	install $(CURDIR)/debian/default $(CURDIR)/debian/bforce/etc/default/bforce/
-	/usr/bin/install -c -o uucp -g news source/bin/bforce $(CURDIR)/debian/bforce/usr/bin/bforce 
-	/usr/bin/install -c -o uucp -g news source/bin/bfindex $(CURDIR)/debian/bforce/usr/bin/bfindex
-	/usr/bin/install -c -o uucp -g news source/bin/bfstat $(CURDIR)/debian/bforce/usr/bin/bfstat
-	/usr/bin/install -c -o uucp -g news source/bin/nlookup $(CURDIR)/debian/bforce/usr/bin/nlookup
-	/usr/bin/install -c -o uucp -g news contrib/outman $(CURDIR)/debian/bforce/usr/bin/outman
-	/usr/bin/install -c -m 644 -o uucp -g news examples/bforce.conf $(CURDIR)/debian/bforce/etc/bforce/bforce.conf
-	/usr/bin/install -c -m 644 -o uucp -g news examples/bforce.subst $(CURDIR)/debian/bforce/etc/bforce/bforce.subst
-	/usr/bin/install -c -m 644 -o uucp -g news examples/bforce.passwd $(CURDIR)/debian/bforce/etc/bforce/bforce.passwd	
-	/usr/bin/install -c -m 644 -o uucp -g news examples/freq.aliases $(CURDIR)/debian/bforce/etc/bforce/freq.aliases
-	/usr/bin/install -c -m 644 -o uucp -g news examples/freq.dirs $(CURDIR)/debian/bforce/etc/bforce/freq.dirs
 
+	/usr/bin/install -c -o $(USER) -g $(GROUP) source/bin/bforce $(CURDIR)/debian/bforce/usr/bin/bforce 
+	/usr/bin/install -c -o $(USER) -g $(GROUP) source/bin/bfindex $(CURDIR)/debian/bforce/usr/bin/bfindex
+	/usr/bin/install -c -o $(USER) -g $(GROUP) source/bin/bfstat $(CURDIR)/debian/bforce/usr/bin/bfstat
+	/usr/bin/install -c -o $(USER) -g $(GROUP) source/bin/nlookup $(CURDIR)/debian/bforce/usr/bin/nlookup
+	/usr/bin/install -c -o $(USER) -g $(GROUP) contrib/outman $(CURDIR)/debian/bforce/usr/bin/outman
+	/usr/bin/install -c -m 644 -o $(USER) -g $(GROUP) examples/bforce.conf $(CURDIR)/debian/bforce/etc/bforce/bforce.conf
+	/usr/bin/install -c -m 644 -o $(USER) -g $(GROUP) examples/bforce.subst $(CURDIR)/debian/bforce/etc/bforce/bforce.subst
+	/usr/bin/install -c -m 600 -o $(USER) -g $(GROUP) examples/bforce.passwd $(CURDIR)/debian/bforce/etc/bforce/bforce.passwd	
+	/usr/bin/install -c -m 644 -o $(USER) -g $(GROUP) examples/freq.aliases $(CURDIR)/debian/bforce/etc/bforce/freq.aliases
+	/usr/bin/install -c -m 644 -o $(USER) -g $(GROUP) examples/freq.dirs $(CURDIR)/debian/bforce/etc/bforce/freq.dirs
 
+	/usr/bin/install $(CURDIR)/debian/bfha.def $(CURDIR)/debian/bforce/etc/default/bforce/bfha
+	/usr/bin/install $(CURDIR)/contrib/bfha/bfha-debian.pl $(CURDIR)/debian/bforce/usr/lib/bforce/bfha.pl
 
 # Build architecture-independent files here.
 binary-indep: build install
@@ -97,9 +100,9 @@ binary-arch: build install
 	dh_strip
 	dh_compress
 	dh_fixperms
-	chown -R uucp:news $(CURDIR)/debian/bforce/etc/bforce
-	chown -R uucp:news $(CURDIR)/debian/bforce/var/spool/fido $(CURDIR)/debian/bforce/var/spool/bforce
-	chown -R uucp:news $(CURDIR)/debian/bforce/var/log/bforce $(CURDIR)/debian/bforce/var/run/bforce
+	chown -R $(USER):news $(CURDIR)/debian/bforce/etc/bforce
+	chown -R $(USER):news $(CURDIR)/debian/bforce/var/spool/fido $(CURDIR)/debian/bforce/var/spool/bforce
+	chown -R $(USER):news $(CURDIR)/debian/bforce/var/log/bforce $(CURDIR)/debian/bforce/var/run/bforce
 #	dh_makeshlibs
 	dh_installdeb
 	dh_shlibdeps

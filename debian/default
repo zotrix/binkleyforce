@@ -1,2 +1,8 @@
-#
-RUN="no"
+# Bforce defaults 
+# (c) 2005 Evgeniy Kozhuhovskiy, e.kozhuhovskiy (at) gmail.com
+
+# Run bforce as daemon?
+RUN=no
+
+# Run bforce history analyzer before logrotate (require news server)
+BFHA=no

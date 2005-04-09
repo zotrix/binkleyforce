@@ -1,3 +1,9 @@
+bforce (0.22.8.ugenk5-5) unstable; urgency=low
+
+  * added bfha.pl script to distribution, it`s config placed in /etc/default/bforce/bfha
+
+ -- Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>  Sat,  9 Apr 2005 15:39:26 +0200
+
 bforce (0.22.8.ugenk5-4) unstable; urgency=low
 
   * changed 'nocreate' to 'create 640 uucp news' in logrotate

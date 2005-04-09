@@ -43,7 +43,7 @@ my $VERSION = '$Revision$ ';
 
 my $inews = "/usr/bin/inews -h -O -S";
 
-my $log = "/var/spool/fido/history";
+my $log = "/var/log/fido/history";
 
 my $rep_newsgroups = "ftn.1838.stat";
 my $rep_from = "\"Statistics generator\" <snp\@gloom.intra.eu.org>";

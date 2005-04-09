@@ -1,0 +1,7 @@
+my $inews = "/usr/bin/inews -h -O -S";
+my $log = "/var/log/fido/history";
+my $rep_newsgroups = "junk";
+my $rep_from = "\"Statistics generator\" <fido\@localhost>";
+my $rep1_subj = "Sessions history";
+my $rep2_subj = "Sessions history";
+my $rep3_subj = "Links statistics";

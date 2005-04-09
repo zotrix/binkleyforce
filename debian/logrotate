@@ -5,6 +5,10 @@
 	notifempty
 	compress
 	notifempty
+	prerotate 
+		  (test -f /etc/default/bforce/bfha && \
+		  grep "BFHA=yes" /etc/default/bforce/default) && /usr/lib/bforce/bfha.pl
+	endscript
 	create 644 uucp news
 }
 
