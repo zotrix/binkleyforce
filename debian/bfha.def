@@ -5,3 +5,6 @@ my $rep_from = "\"Statistics generator\" <fido\@localhost>";
 my $rep1_subj = "Sessions history";
 my $rep2_subj = "Sessions history";
 my $rep3_subj = "Links statistics";
+
+# We are reading configs, isnt it? :)
+1;

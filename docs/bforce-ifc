@@ -1,0 +1,14 @@
+# xinetd service bforce-ifc
+# Shamelessly stolen from RU.UNIX.FTN
+# Original author Eugeny Davidov <2:5030/1900.3>
+# Modified for ALTLinux by Sir Raorn <raorn@binec.ru>
+service fido
+{
+        disable         = no
+        socket_type     = stream
+        wait            = no
+        protocol        = tcp
+        user            = fido
+        server          = /usr/bin/bforce
+        server_args     = -i -a auto
+}
