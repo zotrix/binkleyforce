@@ -34,3 +34,4 @@
 =============
  + fixed ``got unexpected emsi sequence "EMSI_INQC816"''
  + added some features to INSTALL.ru
+ * added documentation about incoming sessions over ip/pstn by Igor Mitichev
