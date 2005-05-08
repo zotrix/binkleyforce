@@ -1,9 +1,14 @@
 2005-05-08  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 
+	* bfutil/nlookup.c (print_nodeinfo): added "Type" entry to the
+	nlookup output
+
+2005-05-08  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
+
 	* configure.in: Some changes
 	* configure.in: Now default prefix is /usr/local/fido (as in fidogate)
 
-2005-03-26  ugenk  <e.kozhuhovskiy@generation-p.com>
+2005-03-26  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 
 	* bforce/nodelist.c (nodelist_open): fixed compilation with gcc-2.95
 
