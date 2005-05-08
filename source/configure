@@ -273,6 +273,7 @@ PACKAGE_VERSION='0.22.8.ugenk5'
 PACKAGE_STRING='bforce 0.22.8.ugenk5'
 PACKAGE_BUGREPORT='e.kozhuhovskiy@gmail.com'
 
+ac_default_prefix=/usr/local/fido
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -1607,6 +1608,9 @@ _ACEOF
 echo "${ECHO_T}$lockdir" >&6
 
 fi;
+
+
+
 
 for ac_prog in 'bison -y' byacc
 do
