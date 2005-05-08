@@ -1,6 +1,7 @@
 2005-05-08  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 
 	* configure.in: Some changes
+	* configure.in: Now default prefix is /usr/local/fido (as in fidogate)
 
 2005-03-26  ugenk  <e.kozhuhovskiy@generation-p.com>
 
