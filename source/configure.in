@@ -3,7 +3,7 @@ dnl
 dnl $Id$
 dnl
 #AC_INIT(bforce/bforce.c)
-AC_INIT([bforce],[0.22.8.ugenk2],[ugenk@tut.by])
+AC_INIT([bforce],[0.22.8.ugenk5],[e.kozhuhovskiy@gmail.com])
 AC_CONFIG_HEADER(include/config.h)
 AC_CANONICAL_SYSTEM
 dnl # Minimum Autoconf version required.
@@ -86,7 +86,6 @@ dnl Checks for programs.
 AC_PROG_YACC
 AC_PROG_CC
 AC_PROG_INSTALL
-
 dnl Checks for libraries.
 
 dnl Checks for header files.
