@@ -59,7 +59,9 @@ void print_nodemail(const s_node *node)
 void print_nodeinfo(const s_node *node)
 {
 	char abuf[BF_MAXADDRSTR+1];
-					
+	char status[6]; /* Maximum size for node keyword, see
+			 * nodelist.c for details */
+	
 	printf("Address   : %s\n", ftn_addrstr(abuf, node->addr));
 	printf("System    : %s\n", node->name);
 	printf("Phone     : %s\n", node->phone);
@@ -87,10 +89,36 @@ void print_nodeinfo(const s_node *node)
 		strnxcpy(username, node->sysop, sizeof(node->sysop));
 		string_replchar(username, ' ', '_');
 		
-		printf("e-mail    : %s@%s\n", username,
+		printf("E-mail    : %s@%s\n", username,
 			ftn_addrstr_inet(abuf, node->addr));
 	}
-
+	switch( node->keyword ) {
+	case KEYWORD_HOLD :
+	     strcpy(status,"Hold");
+	     break;
+	case KEYWORD_DOWN :
+	     strcpy(status,"Down");
+	     break;
+	case KEYWORD_HUB :
+	     strcpy(status,"Hub");
+	     break;
+	case KEYWORD_HOST :
+	     strcpy(status,"Host");
+	     break;
+	case KEYWORD_PVT :
+	     strcpy(status,"Pvt");
+	     break;
+	case KEYWORD_BOSS :
+	     strcpy(status,"Boss");
+	     break;
+	case KEYWORD_POINT :
+	     strcpy(status,"Point");
+	     break;
+	default:
+	     strcpy(status,"Node");
+	     break;
+	}
+	printf("Type      : %s\n",status);
 	fflush(stdout);
 }
 
