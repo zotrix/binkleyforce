@@ -11,3 +11,4 @@
  - fix debug
  - fix domains support
  + add zlib compression
+ + add run_aftermail 
