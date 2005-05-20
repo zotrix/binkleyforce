@@ -107,7 +107,10 @@ BFORCE_OBJS	= bforce/bforce.o \
 		@echo Compiling $*.c
 		@$(CC) $(CFLAGS) $(INCLUDES) $(DEFINES) -c $< -o $@
 
-all:		bin/bforce bin/bfindex bin/bfstat bin/nlookup
+all:		bin bin/bforce bin/bfindex bin/bfstat bin/nlookup
+
+bin:		
+		test -d bin || mkdir bin
 
 bforce/expression.c: bforce/expression.y
 		$(YACC) bforce/expression.y
