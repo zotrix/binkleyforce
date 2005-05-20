@@ -36,7 +36,7 @@
  + added some features to INSTALL.ru
  * added documentation about incoming sessions over ip/pstn by Igor Mitichev
 
-0.22.9.ugenk6
+0.22.8.ugenk6
 =============
  + some changes in autoconf
  * added Type to nlookup
