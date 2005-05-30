@@ -40,3 +40,5 @@
 =============
  + some changes in autoconf
  * added Type to nlookup
+ * fixed 'Ñ' in FAQ
+ 
