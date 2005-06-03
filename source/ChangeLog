@@ -1,3 +1,9 @@
+2005-06-03  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
+	
+	* configure.in: fixed warnings under *bsd (removed sys/mount.h
+	from the list of checking headers)
+	* configure.in: syslog disabled by default
+
 2005-05-08  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 
 	* bfutil/nlookup.c (print_nodeinfo): added "Type" entry to the
