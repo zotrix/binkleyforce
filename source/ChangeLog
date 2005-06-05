@@ -1,3 +1,8 @@
+2005-06-05  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
+
+	* configure.in: added logdir and spooldir to ./configure
+	(thnx to max boyarov)
+
 2005-06-03  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@generation-p.com>
 	
 	* configure.in: fixed warnings under *bsd (removed sys/mount.h

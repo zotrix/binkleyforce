@@ -24,6 +24,9 @@ fi
 #
 OWNER='uucp'
 GROUP='news'
+SPOOLDIR=/var/spool/bforce
+LOGDIR=/var/log/bforce
+
 AC_ARG_WITH(owner, dnl
   --with-owner=USER       set possibility to run bforce from a USER (uucp),
   [OWNER=$with_owner
@@ -35,6 +38,17 @@ AC_ARG_WITH(group, dnl
             ])
 AC_SUBST(GROUP)
 
+AC_ARG_WITH(spooldir, dnl
+  --with-spooldir=SPOOLDIR       set directory for spooler files (/var/spool/bforce),
+  [SPOOLDIR=$with_spooldir
+            ])
+AC_SUBST(SPOOLDIR)
+
+AC_ARG_WITH(logdir, dnl
+  --with-logdir=LOGDIR       set directory for logs (/var/log/bforce),
+  [LOGDIR=$with_logdir
+            ])
+AC_SUBST(LOGDIR)
 
 AC_ARG_ENABLE(debug,           [ --enable-debug           enable debugging support (default)],
 	[if test $enableval = yes; then
@@ -63,10 +77,10 @@ AC_ARG_ENABLE(csy-locks,       [ --enable-csy-locks       use '.csy' locks while
 		AC_DEFINE([BFORCE_USE_CSY], [1], [Use '.csy' locks while dialing])
 	fi], [AC_DEFINE([BFORCE_USE_CSY], [1], [Use '.csy' locks while dialing])])
 	 
-AC_ARG_ENABLE(syslog,       [ --disable-syslog		use syslog for logging (experimental) (default)],
-	[if test $enableval = no; then
+AC_ARG_ENABLE(syslog,       [ --enable-syslog		use syslog for logging [experimental] (default)],
+	[if test $enableval = yes; then
 		AC_DEFINE([USE_SYSLOG], [1], [Use syslog for logging])
-	fi], [AC_DEFINE([USE_SYSLOG], [0], [Use syslog for logging])])
+	fi], [AC_DEFINE([USE_SYSLOG], [1], [Use syslog for logging])])
 
 AC_ARG_WITH(uucp-lockdir,       [ --with-uucp-lockdir      specify directory for UUCP style locks],
 	[AC_DEFINE_UNQUOTED(BFORCE_LOCK_DIR, "$withval")],
@@ -98,7 +112,7 @@ AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS(fcntl.h sys/file.h sys/ioctl.h sys/time.h unistd.h)
 AC_CHECK_HEADERS(termios.h sys/termiox.h sys/vfs.h sys/statfs.h sys/statvfs.h)
-AC_CHECK_HEADERS(sys/select.h sys/param.h)
+AC_CHECK_HEADERS(sys/select.h sys/param.h sys/mount.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST

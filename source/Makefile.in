@@ -25,8 +25,8 @@ OWNER		= @OWNER@
 GROUP		= @GROUP@
 CONFDIR		= @sysconfdir@
 BINDIR		= @bindir@
-LOGDIR		= /var/log/bforce
-SPOOLDIR	= /var/spool/bforce
+LOGDIR		= @LOGDIR@
+SPOOLDIR	= @SPOOLDIR@
 
 DAEMON_LOGFILE	= $(LOGDIR)/bf-daemon
 BFORCE_LOGFILE	= $(LOGDIR)/bf-log
