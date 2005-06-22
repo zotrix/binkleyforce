@@ -160,7 +160,7 @@ A: /PVC/
    bforce-0.22.4-0.22.4pl2.diff.bz2. Время для фреков c 1:00 до 5:20, c
    7:40-9:00.
 
-Q: Подскажите, пожалyйста, как запpетить непаpольные соединени.
+Q: Подскажите, пожалyйста, как запpетить непаpольные соединения.
 A: /AB/
    options (Incoming && !Protected) NoZmodem NoZedzap NoHydra
 
@@ -173,6 +173,10 @@ A: /DR/
    delay_files_send (!protected) !%netmail
    И в подобном стиле можно ограничивать прием/передачу по другим критерим.
 
+Q: bforce не всегда вяжется с t-mail/ip
+A: /EK/
+   Соберите его с --enable-buggy-emsi
+
 ===
 
   Thanx to:
@@ -180,6 +184,7 @@ A: /DR/
 AB  = Alexander Belkin, 2:5020/2120
 All = Коллективный разум эхи
 DR  = Dmitry Rodin, 2:5020/5410
+EK  = Evgeniy Kozhuhovskiy, 2:450/256
 GM  = George Mozhaev, 2:5011/211.1
 KAS = konstantin a. stepanenkoff, 2:5030/1251
 MR  = Maxi Rovnich, 2:5030/872
