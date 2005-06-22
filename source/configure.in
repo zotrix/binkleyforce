@@ -82,6 +82,11 @@ AC_ARG_ENABLE(syslog,       [ --enable-syslog		use syslog for logging [experimen
 		AC_DEFINE([USE_SYSLOG], [1], [Use syslog for logging])
 	fi], [AC_DEFINE([USE_SYSLOG], [1], [Use syslog for logging])])
 
+AC_ARG_ENABLE(buggy_emsi,   [ --disable-buggy-emsi	disable buggy emsi support (default)],
+	[if test $enableval = yes; then
+		AC_DEFINE([BUGGY_EMSI], [1], [Disable buggy emsi])
+	fi], [AC_DEFINE([BUGGY_EMSI], [0], [Enable buggy emsi])])
+
 AC_ARG_WITH(uucp-lockdir,       [ --with-uucp-lockdir      specify directory for UUCP style locks],
 	[AC_DEFINE_UNQUOTED(BFORCE_LOCK_DIR, "$withval")],
 	[AC_MSG_CHECKING("UUCP lock files directory")

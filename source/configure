@@ -855,6 +855,7 @@ Optional Features:
  --enable-log-passwd      write session password to log (default)
  --enable-csy-locks       use '.csy' locks while dialing (default)
  --enable-syslog		use syslog for logging experimental (default)
+ --disable-buggy-emsi	disable buggy emsi support (default)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1599,6 +1600,24 @@ else
 
 cat >>confdefs.h <<\_ACEOF
 #define USE_SYSLOG 1
+_ACEOF
+
+fi;
+
+# Check whether --enable-buggy_emsi or --disable-buggy_emsi was given.
+if test "${enable_buggy_emsi+set}" = set; then
+  enableval="$enable_buggy_emsi"
+  if test $enableval = yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define BUGGY_EMSI 1
+_ACEOF
+
+	fi
+else
+
+cat >>confdefs.h <<\_ACEOF
+#define BUGGY_EMSI 0
 _ACEOF
 
 fi;
