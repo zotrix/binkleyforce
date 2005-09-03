@@ -42,3 +42,4 @@
  * added Type to nlookup
  * fixed 'Ñ' in FAQ
  * added buggy-emsi option in configure. use it in case of problems with stupid mailers
+ * fixed hydra
