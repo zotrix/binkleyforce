@@ -1030,7 +1030,7 @@ static int hydra_parse_init(s_hydrainfo *hi, char *pkt, size_t pktlen)
 		/*
 		 * Get other's Hydra revision time stamp
 		 */
-		sscanf(pkt, "%08lx", &revtime);
+		sscanf(pkt, "%08lx", (unsigned long *)&revtime);
 		
 		/*
 		 * Get other's application info
@@ -1638,7 +1638,7 @@ int hydra_batch(s_hydrainfo *hi, s_protinfo *pi)
 					
 					/* Get file modification time and size */
 					sscanf(hi->ibuf, "%08lx%08x%*08x%*08x%*08x",
-						&modtime, &filesize);
+						(unsigned long *)&modtime, &filesize);
 					
 					/* Convert local time -> UTC */
 					modtime = localtogmt(modtime);

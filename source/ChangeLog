@@ -1,3 +1,8 @@
+2005-09-03  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
+
+	* bforce/prot_hydra.c: added patch to fix problems while sending
+	files from ?lo on hydra, by anray
+
 2005-06-23  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
 
 	* bforce/prot_emsi.c (sm_rx_waitseq): reviewed code for buggy-emsi option
