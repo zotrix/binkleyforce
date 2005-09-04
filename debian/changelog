@@ -1,3 +1,9 @@
+bforce (0.22.8.ugenk6-1) unstable; urgency=low
+
+  * Upstream release
+
+ -- Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>  Sat,  3 Sep 2005 13:06:52 +0300
+
 bforce (0.22.8.ugenk5-5) unstable; urgency=low
 
   * added bfha.pl script to distribution, it`s config placed in /etc/default/bforce/bfha
