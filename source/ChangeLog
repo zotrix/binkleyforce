@@ -1,3 +1,11 @@
+2005-09-03  Andrey Slusar  <anray@users.sourceforge.net>
+
+	* bforce/prot_emsi_misc.c (emsi_parsedat): correct time_t arg
+	size.
+
+	* bforce/prot_zmrecv.c (zmodem_proc_ZFILE): correct time_t arg
+	size.
+
 2005-09-03  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
 
 	* bforce/prot_hydra.c: added patch to fix problems while sending

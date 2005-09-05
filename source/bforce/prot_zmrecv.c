@@ -547,7 +547,7 @@ static int zmodem_proc_ZFILE(s_protinfo *pi, char *blkptr, size_t blklen)
 	fileiptr = blkptr + strlen(blkptr) + 1;
 	
 	if( fileiptr >= (blkptr + blklen) ||
-	    sscanf(fileiptr, "%d%lo", &filesize, &filetime) < 1 )
+	    sscanf(fileiptr, "%d%lo", &filesize, (unsigned long *)&filetime) < 1 )
 	{
 		log("zmodem: got invalid ZFILE packet");
 		return 1;

@@ -578,7 +578,7 @@ int emsi_parsedat(char *emsi_dat, s_emsi *emsi)
 		{		
 			if( (p=get_field(&emsi_dat, '{', '}')) == NULL ) return(1);
 			if( (p=get_field(&p, '[', ']'))        == NULL ) return(1);
-			if( sscanf(p, "%08lx", &emsi->time) == 1 )
+			if( sscanf(p, "%08lx", (unsigned long *)&emsi->time) == 1 )
 			{
 				emsi->have_trx = 1;
 			}
