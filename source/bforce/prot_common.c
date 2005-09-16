@@ -702,7 +702,7 @@ int p_rx_fopen(s_protinfo *pi, char *fn, size_t sz, time_t tm, mode_t mode)
 	/*
 	 * Upper case file names convert to lower case.
 	 */
-	if( string_isupper(pi->recv->local_name) )
+	if( (string_isupper(pi->recv->local_name)) && conf_boolean(cf_recieved_to_lower))
 		string_tolower(pi->recv->local_name);
 	
 	if( strcmp(pi->recv->local_name, pi->recv->net_name) )

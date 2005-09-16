@@ -166,7 +166,8 @@ s_conf_entry bforce_config[BFORCE_NUMBER_OF_KEYWORDS+1] = {
 	CONF_KEY(zmodem_start_block_size,    CT_NUMBER),
 	CONF_KEY(zmodem_tx_window,           CT_NUMBER),
 	CONF_KEY(nomail_flag,                CT_STRING),
-	CONF_KEY(bind_ip,                CT_STRING),
+	CONF_KEY(bind_ip,                    CT_STRING),
+	CONF_KEY(recieved_to_lower,          CT_BOOLEAN),
 #ifdef USE_SYSLOG
 	CONF_KEY(syslog_facility,            CT_NUMBER),
 #endif

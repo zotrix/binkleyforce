@@ -261,6 +261,7 @@ typedef enum {
 	cf_zmodem_tx_window,
 	cf_nomail_flag,
 	cf_bind_ip,
+	cf_recieved_to_lower,
 #ifdef USE_SYSLOG
 	cf_syslog_facility,
 #endif
