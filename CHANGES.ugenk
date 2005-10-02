@@ -43,3 +43,7 @@
  * fixed 'Ñ' in FAQ
  * added buggy-emsi option in configure. use it in case of problems with stupid mailers
  * fixed hydra
+
+0.22.9
+======
+ + Changed version for compliance with *BSD ports

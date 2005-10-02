@@ -1,3 +1,9 @@
+bforce (0.22.9) unstable; urgency=low
+
+  * Changed version in upstream
+
+ -- Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>  Sun,  2 Oct 2005 22:45:27 +0300
+
 bforce (0.22.8.ugenk6-1) unstable; urgency=low
 
   * Upstream release
