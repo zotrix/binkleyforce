@@ -1,4 +1,5 @@
 usr/bin
+usr/lib/bforce
 etc/bforce
 etc/default
 etc/default/bforce

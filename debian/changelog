@@ -1,4 +1,10 @@
-bforce (0.22.9) unstable; urgency=low
+bforce (0.22.9-2) unstable; urgency=low
+
+  * fixed bug in debian/dirs file (usr/lib/bforce wasnt here)
+
+ -- Evgeniy Kozhuhovskiy <ugenk@mgts.by>  Wed,  5 Oct 2005 09:32:23 +0300
+
+bforce (0.22.9-1) unstable; urgency=low
 
   * Changed version in upstream
 
