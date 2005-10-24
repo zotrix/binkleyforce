@@ -375,6 +375,13 @@ static int proc_override(s_override *dest, char *value)
 			(*p)->sIpaddr = xstrcpy(arg);
 			key = NULL;
 		}
+		else if( strcasecmp(key, "run") == 0)
+		{
+		        if( (*p)->run )
+			        free((*p)->run);
+		        (*p)->run = xstrcpy(arg);
+		        key = NULL;
+		}
 		else if( strcasecmp(key, "worktime") == 0 )
 		{
 			if( timevec_parse_list(&((*p)->worktime), arg) == -1 )

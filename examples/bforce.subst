@@ -17,17 +17,18 @@
 #    Override 1:2/3 Phone Unpublished
 #
 # Happy
-override 776:308/1      Ipaddr 192.168.1.1 Flags CM,IFC
-override 776:308/1.1    Ipaddr 192.168.1.2 Flags CM,BINKP
+#override 776:308/1      Ipaddr 192.168.1.1 Flags CM,IFC
+#override 776:308/1.1    Ipaddr 192.168.1.2 Flags CM,BINKP
 
 # Estar
-override 2:5020/758     Phone 961-2243
+#override 2:5020/758     Phone 961-2243
 
 # Hard Core
-override 2:5020/1398    Phone 700-0245 Worktime 00:00-07:00
+#override 2:5020/1398    Phone 700-0245 Worktime 00:00-07:00
 
 # Stick's
-override 2:5020/1682    Phone 308-5537 Worktime 23:30-07:00
+#override 2:5020/1682    Phone 308-5537 Worktime 23:30-07:00
+#override 2:5020/2120    Ipaddr 192.168.1.1 flags BINKP,CM
 
-override 2:5020/2120    Ipaddr 192.168.1.1 flags BINKP,CM
-
+# Example how to run external script.
+#override 2:4500/1       Phone 123-4567 run /usr/local/bin/sc45001.sh 

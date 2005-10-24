@@ -47,3 +47,6 @@
 0.22.9
 ======
  + Changed version for compliance with *BSD ports
+ + Added possibility to run external program for each override and
+   hidden. See bforce.subst.sample for examples and
+   docs/readme.txt for details

@@ -141,7 +141,8 @@ typedef struct override {
 	char *sPhone;
 	char *sFlags;
 	s_timevec worktime;
-	s_timevec freqtime;
+        s_timevec freqtime;
+        char *run;
 	struct override *hidden;	/* Hidden lines list                 */
 } s_override;
 

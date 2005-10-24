@@ -538,7 +538,8 @@ int call_system_tcpip(void)
 
 int call_system(s_faddr addr, const s_bforce_opts *opts)
 {
-	int rc = 0;
+        int rc = 0;
+        int runrc = 0;
 	char abuf[BF_MAXADDRSTR+1];
 	char *p_lockdir = NULL;
 	char *errmsg = NULL;
@@ -667,6 +668,13 @@ do_session:
 	{
 		errmsg = "cannot lock address";
 		gotoexit(BFERR_SYSTEM_LOCKED);
+	}
+	if( strlen(state.override.run) > 0 )
+	{
+	     if ( (runrc = system(state.override.run) != 0 ))
+	     {
+		  logerr("run script \"%s\" executed with non-zero return value", state.override.run);
+	     }
 	}
 	
 	setproctitle("bforce calling %.32s, %.32s",

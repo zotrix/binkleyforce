@@ -2,7 +2,6 @@
 "+" - feature
 
 
- + per link dial_prefix option
  - sed detection in makefile
  + [io_modem.c] add random and smart algorythms selecting of tty.
    smart means (1) write time stat for every line and (2) evenly
