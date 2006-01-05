@@ -39,6 +39,9 @@
 #define BF_MAXDOMAIN		40
 #define BF_MAXADDRSTR		80
 
+/* IP-only nodes phone */
+#define NO_PSTN_PHONE "00-00-000000"
+
 /*
  * Maximum length of file name (without path)
  */

@@ -93,7 +93,7 @@ static int daemon_call_branch(s_sysentry *syst, const char *lockdir, s_modemport
 	setproctitle("bforce calling %s, %s",
 		ftn_addrstr(abuf, state.node.addr), state.node.phone);
 	
-	if( syst->tcpip )
+	if( ( syst->tcpip ) || (strcmp(state.node.phone,NO_PSTN_PHONE)) )
 	{
 		rc = call_system_tcpip();
 	}
