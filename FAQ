@@ -199,11 +199,21 @@ A: /VS/
 
 Геморрой, конечно, но вроде работать должно.
 
+Q: Как сделать, что бы bforce искал конфиг не там, где он его ищет, а в /xx/yy?
+A: /EK/
+   --sysconfdir к configure?
+A: /AS/
+   А env BFCONFIG забыл что-ли?
+  ,----
+  | /var/src/cvs/bforce/ > grep -r 'BFCONFIG' ./
+  | ./source/bforce/conf_read.c:    const char *name = getenv("BFCONFIG");
+  `----
 ===
 
   Thanx to:
 
 AB  = Alexander Belkin, 2:5020/2120
+AS  = Andrey Slusar, 2:467/126
 All = Коллективный разум эхи
 DR  = Dmitry Rodin, 2:5020/5410
 EK  = Evgeniy Kozhuhovskiy, 2:450/256
