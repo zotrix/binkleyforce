@@ -292,7 +292,7 @@ int logerr(const char *s, ...)
 
 const char *log_getfilename(int whatfor)
 {
-     const char *p = NULL;
+     const char *p = "/dev/null";
      return p;
 }
 

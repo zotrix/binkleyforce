@@ -1,3 +1,7 @@
+2006-02-05  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
+
+	* bforce/logger.c: trying to fix broken syslog.
+
 2006-01-04  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
 
 	* bforce/daemon_call.c (daemon_call_branch): if phone ==
