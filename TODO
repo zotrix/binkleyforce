@@ -3,6 +3,10 @@
 
 
  - if phone == 00-00-000000 then call via ip. (or dont call at all)?
+ -    Сабж я победил когда удалил из конфига строчку вида (точное написание не 
+помню):
+   # received_to_lower no
+   
  - sed detection in makefile
  + [io_modem.c] add random and smart algorythms selecting of tty.
    smart means (1) write time stat for every line and (2) evenly
