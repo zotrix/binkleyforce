@@ -669,7 +669,7 @@ do_session:
 		errmsg = "cannot lock address";
 		gotoexit(BFERR_SYSTEM_LOCKED);
 	}
-	if( strlen(state.override.run) > 0 )
+	if( NULL != state.override.run && strlen(state.override.run) > 0 )
 	{
 	     if ( (runrc = system(state.override.run) != 0 ))
 	     {
