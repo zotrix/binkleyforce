@@ -301,10 +301,11 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
    	     struct stat ndfile;
 	     time_t lasttime = 0;
 	     struct dirent *ndir;
-	     DIR *ndirstream;
+	     DIR *ndirstream = NULL;
 	     if( (ndirstream = opendir(dir)) == NULL )
 	     {
 		  log("error opening nodelist directory: %s", dir);
+		  return NULL;
 	     }
 	     else
 	     {
@@ -337,8 +338,8 @@ s_nodelist *nodelist_open(const char *dir, char *name, int mode)
 			    }
 		       }
 		  }
+		  closedir(ndirstream);
 	     }
-	     closedir(ndirstream);
 	}
 
 	if( strcmp(name+strlen(name)-4, ".999") == 0 )

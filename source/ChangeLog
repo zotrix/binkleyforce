@@ -1,3 +1,7 @@
+2006-10-27  Evgeniy Kozhuhovskiy  <ugenk@mgts.by>
+
+	* bforce/nodelist.c (nodelist_open): some fixes
+
 2006-02-05  Evgeniy Kozhuhovskiy  <e.kozhuhovskiy@gmail.com>
 
 	* bforce/logger.c: trying to fix broken syslog.
