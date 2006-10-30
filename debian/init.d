@@ -1,13 +1,6 @@
 #! /bin/sh
 #
-# skeleton	example file to build /etc/init.d/ scripts.
-#		This file should be used to construct scripts for /etc/init.d.
-#
-#		Written by Miquel van Smoorenburg <miquels@cistron.nl>.
-#		Modified for Debian 
-#		by Ian Murdock <imurdock@gnu.ai.mit.edu>.
-#
-# Version:	@(#)skeleton  1.9  26-Feb-2001  miquels@cistron.nl
+# Version:	@(#)bforce  1.1  30-Oct-2006  e.kozhuhovskiy@gmail.com
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,11 +8,11 @@
 # (at your option) any later version.
 
 
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/bin/bforce
 NAME=bforce
 DESC="fidonet mailer"
-OWNER="uucp"
+OWNER="news"
 test -x $DAEMON || exit 0
 
 # Include bforce defaults if available
@@ -38,19 +31,19 @@ set -e
 case "$1" in
   start)
 	echo -n "Starting $DESC: "
-	su $OWNER -c "$DAEMON -d"
+	su -c "$DAEMON -d" $OWNER
 	echo "$NAME."
 	;;
   stop)
 	echo -n "Stopping $DESC: "
-	su $OWNER -c "$DAEMON -q"
+	su -c "$DAEMON -q" $OWNER
 	echo "$NAME."
 	;;
   restart|force-reload)
 	echo -n "Restarting $DESC: "
-	su $OWNER "$DAEMON -q"
+	su -c "$DAEMON -q" $OWNER
 	sleep 1
-	su $OWNER "$DAEMON -d"
+	su -c "$DAEMON -d" $OWNER
 	echo "$NAME."
 	;;
   *)

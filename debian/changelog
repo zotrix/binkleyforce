@@ -1,3 +1,9 @@
+bforce (0.22.9-3) unstable; urgency=low
+
+  * fixes in init.d script
+
+ -- Evgeniy Kozhuhovskiy <ugenk@mgts.by>  Mon, 30 Oct 2006 09:54:43 +0200
+
 bforce (0.22.9-2) unstable; urgency=low
 
   * fixed bug in debian/dirs file (usr/lib/bforce wasnt here)
