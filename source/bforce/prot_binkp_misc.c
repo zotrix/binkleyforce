@@ -177,6 +177,7 @@ void binkp_queuemsg(s_bpinfo *bpi, e_bpmsg msg, const char *s1, const char *s2)
 		(char*)bpi->msgqueue[bpi->n_msgs].data+3));
 
 	++bpi->n_msgs;
+	++bpi->msgs_in_batch;
 }
 
 /*****************************************************************************
@@ -220,20 +221,24 @@ void binkp_queuemsgf(s_bpinfo *bpi, e_bpmsg msg, const char *fmt, ...)
  * Return value:
  * 	non-zero value on error, zero on success
  */
-int binkp_parsfinfo(char *s, char **fn, size_t *sz, time_t *tm, size_t *offs)
-{
+int binkp_parsfinfo(char *str,char **fn,size_t *sz,time_t *tm,size_t *offs){
+
 	char *n;
 	char *p_fname = NULL;
 	char *p_size  = NULL;
 	char *p_time  = NULL;
 	char *p_offs  = NULL;
-	
+
+	static char *s = NULL;
+
 	/* Attention, offs may be NULL! */
 	
-	ASSERT(s != NULL && fn != NULL && sz != NULL && tm != NULL);
+	ASSERT(str != NULL && fn != NULL && sz != NULL && tm != NULL);
 
 	DEB((D_PROT, "binkp_parsemsg: want parse \"%s\"", s));
 	
+	if (s) free (s);
+	s = xstrcpy (str);
 	p_fname = string_token(s, &n, NULL, 0);
 	p_size  = string_token(NULL, &n, NULL, 0);
 	p_time  = string_token(NULL, &n, NULL, 0);
@@ -241,7 +246,8 @@ int binkp_parsfinfo(char *s, char **fn, size_t *sz, time_t *tm, size_t *offs)
 	
 	if( p_fname && p_size && p_time && (!offs || p_offs) )
 	{
-		if( ISDEC(p_size) && ISDEC(p_time) && (!offs || ISDEC(p_offs)) )
+		if( ISDEC(p_size) && ISDEC(p_time) &&
+		    (!offs || ISDEC(p_offs) || !strcmp (p_offs, "-1")) )
 		{
 			(*fn) = p_fname;
 			(*sz) = atol(p_size);
@@ -454,6 +460,7 @@ int binkp_recv(s_bpinfo *bpi)
 				bpi->imsgtype = binkp_getmsgtype(bpi->ibuf[0]);
 				DEB((D_PROT, "binkp_recv: got message #%d, %ld byte(s), \"%s\"",
 					(int)bpi->imsgtype, bpi->isize, bpi->ibuf+1));
+				++bpi->msgs_in_batch;
 				if( bpi->imsgtype < 0 )
 				{
 					bpi->isize = -1;
@@ -528,6 +535,32 @@ void binkp_queue_sysinfo(s_bpinfo *bpi, s_binkp_sysinfo *binkp)
 		binkp_queuemsg(bpi, BPMSG_ADR, NULL, astr);
 		free(astr);
 	}
+	if (state.caller)
+	{
+		char *szOpt = xstrcpy (" MB");
+		if (!nodelist_checkflag (state.node.flags, "NR"))
+			szOpt = xstrcat (szOpt, " NR");
+		if (!nodelist_checkflag (state.node.flags, "ND"))
+			szOpt = xstrcat (szOpt, " ND");
+		if (*szOpt)
+			binkp_queuemsg(bpi, BPMSG_NUL, "OPT", szOpt);
+		free (szOpt);
+	}
+}
+
+/*****************************************************************************
+ * Write options to the log
+ *
+ * Arguments:
+ * 	binkp     structure with the system information
+ *
+ * Return value:
+ * 	None
+ */
+void binkp_log_options(s_binkp_sysinfo *remote)
+{
+	if (remote->options & BINKP_OPT_MB) log ("We are in MB mode.");
+	if (remote->options & BINKP_OPT_NR) log ("We are in NR mode.");
 }
 
 /*****************************************************************************

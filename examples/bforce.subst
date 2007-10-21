@@ -12,6 +12,9 @@
 #
 #  To use BinkP protocol, write:
 #    Override 1:2/3 Ipaddr f3.n2.z1.fidonet.net Flags CM,BINKP
+#    Override 1:2/4 Ipaddr f4.n2.z1.fidonet.net Flags CM,BINKP,NR
+#
+#    NR - for binkp NR mode request (Not Reliable Links).
 #
 #  If you want never call to certain node, write:
 #    Override 1:2/3 Phone Unpublished

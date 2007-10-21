@@ -387,7 +387,16 @@ int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
 {
 	int n;
 	struct stat st;
-	long ftell_pos = ftell(pi->send->fp);
+	long ftell_pos;
+
+	/*
+	 * Sanity check: read from closed file.
+	 */
+	if (pi->send->fp == NULL) {
+	  log ("Error: Read from closed file \"%s\".", pi->send->fname);
+	  return -1;
+	}
+	ftell_pos = ftell(pi->send->fp);
 	
 	pi->send->eofseen = FALSE; /* clear EOF flag */
 	

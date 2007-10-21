@@ -49,4 +49,6 @@
  + Changed version for compliance with *BSD ports
  + Added possibility to run external program for each override and
    hidden. See bforce.subst.sample for examples and
-   docs/readme.txt for details
+   docs/readme.txt for details.
+ + Implement binkp/1.1 (Multiple Batch Mode and Non-reliable Mode).
+ + Turn on FREQ at binkp sessions.

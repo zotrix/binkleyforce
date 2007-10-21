@@ -26,7 +26,7 @@
 
 #define BINKP_NAME		"binkp"
 #define BINKP_MAJOR		1
-#define BINKP_MINOR		0
+#define BINKP_MINOR		1
 #define BINKP_PORT		24554
 #define BINKP_TIMEOUT		(5*60)
 #define BINKP_MIN_BLKSIZE 	128
@@ -124,6 +124,7 @@ typedef struct {
 	int     junkcount;
 	s_bpmsg *msgqueue;	/* Outgoing messages queue */
 	int     n_msgs;		/* Number of messages in queue */
+	int	msgs_in_batch;	/* Number of messages in batch */
 
 	int     timeout;
 } s_bpinfo;
@@ -149,6 +150,7 @@ int  binkp_send(s_bpinfo *bpi);
 int  binkp_flush_queue(s_bpinfo *bpi, int timeout);
 int  binkp_recv(s_bpinfo *bpi);
 void binkp_update_sysinfo(s_binkp_sysinfo *binkp);
+void binkp_log_options(s_binkp_sysinfo *remote);
 void binkp_log_sysinfo(s_binkp_sysinfo *binkp);
 void binkp_queue_sysinfo(s_bpinfo *bpi, s_binkp_sysinfo *binkp);
 void binkp_set_sysinfo(s_binkp_sysinfo *binkp, s_faddr *remote_addr, bool caller);

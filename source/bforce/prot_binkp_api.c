@@ -117,6 +117,7 @@ int binkp_incoming2(s_handshake_protocol *THIS)
 	{
 		session_remote_lookup(remote_data->addrs, remote_data->anum);
 		session_remote_log_status();
+		binkp_log_options(remote_data);
 	}
 
 	if( rc == HRC_OK )
@@ -128,6 +129,7 @@ int binkp_incoming2(s_handshake_protocol *THIS)
 	    	                       remote_data->anum);
 		session_set_send_options();
 		session_set_inbound();
+		session_set_freqs_status();
 	}
 	
 	return rc;
@@ -145,6 +147,8 @@ int binkp_outgoing2(s_handshake_protocol *THIS)
 	
 	remote_data = (s_binkp_sysinfo *)THIS->remote_data;
 	local_data = (s_binkp_sysinfo *)THIS->local_data;
+
+	session_set_freqs_status();
 	
 	binkp_set_sysinfo(local_data, &state.node.addr, TRUE);
 	
@@ -155,6 +159,7 @@ int binkp_outgoing2(s_handshake_protocol *THIS)
 	{
 		session_remote_lookup(remote_data->addrs, remote_data->anum);
 		session_remote_log_status();
+		binkp_log_options(remote_data);
 	}
 
 	if( rc == HRC_OK )

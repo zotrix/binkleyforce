@@ -83,6 +83,9 @@ void binkp_process_NUL(s_binkp_sysinfo *remote_data, char *buffer)
 						&remote_data->majorver,
 						&remote_data->minorver);
 			}
+			if ((remote_data->majorver * 100 + 
+			     remote_data->minorver)> 100)
+			     remote_data->options |= BINKP_OPT_MB;
 		}
 		else
 			strnxcpy(remote_data->progname, buffer+4, sizeof(remote_data->progname));
@@ -210,12 +213,9 @@ int binkp_outgoing(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data)
 			break;
 
 		case BPMSG_NUL:
-			if( binkp_state == BPO_WaitNUL || binkp_state == BPO_WaitADR )
-			{
-				binkp_process_NUL(remote_data, bpi.ibuf+1);
-				if( binkp_state == BPO_WaitNUL )
-					binkp_state = BPO_SendPWD;
-			}
+			binkp_process_NUL(remote_data, bpi.ibuf+1);
+			if( binkp_state == BPO_WaitNUL )
+				binkp_state = BPO_SendPWD;
 			break;
 		
 		case BPMSG_ADR:
@@ -347,14 +347,28 @@ int binkp_incoming(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data)
 			break;
 
 		case BPMSG_NUL:
-			if( binkp_state == BPI_WaitADR )
-				binkp_process_NUL(remote_data, bpi.ibuf+1);
+			binkp_process_NUL(remote_data, bpi.ibuf+1);
 			break;
 		
 		case BPMSG_ADR:
 			if( binkp_state == BPI_WaitADR )
 			{
+				int i;
+				char *szOpt = xstrcpy (" MB");
+				s_override ovr;
 				binkp_process_ADR(remote_data, bpi.ibuf+1);
+				for(i = 0; i < remote_data->anum; i++)
+				{
+					ovr.sFlags = "";
+					override_get (&ovr, remote_data->addrs[i].addr, 0);
+					if (!nodelist_checkflag (ovr.sFlags, "NR"))
+					{
+						szOpt = xstrcat (szOpt, " NR");
+						break;
+					}
+				}
+				binkp_queuemsg(&bpi,BPMSG_NUL,"OPT",szOpt);
+				free (szOpt);
 				binkp_state = BPI_WaitPWD;
 			}
 			break;
@@ -387,17 +401,13 @@ Abort:
 	return rc;
 }
 
-int binkp_transfer(s_protinfo *pi)
-{
+int binkp_transfer(s_protinfo *pi) {
+
 	int  i, n, rc = PRC_NOERROR;
 	bool recv_ready = FALSE;
 	bool send_ready = FALSE;
-	bool sent_EOB = FALSE;
 	bool rcvd_EOB = FALSE;
-	bool send_file = FALSE;
 	bool recv_file = FALSE;
-	bool wait_got = FALSE;
-	bool nofiles = FALSE;
 	int  recv_rc = 0;
 	int  send_rc = 0;
 	char *fname = NULL;
@@ -405,52 +415,71 @@ int binkp_transfer(s_protinfo *pi)
 	time_t ftime = 0;
 	size_t foffs = 0;
 	s_bpinfo bpi;
-	
-	binkp_init_bpinfo(&bpi);
-		
-	while( !sent_EOB || !rcvd_EOB )
-	{
-		if( !send_file && !sent_EOB && bpi.opos == 0 && bpi.n_msgs == 0 )
-		{
-			if( !p_tx_fopen(pi) )
-			{
-				send_file = TRUE;
-				binkp_queuemsgf(&bpi, BPMSG_FILE, "%s %ld %ld 0",
-					pi->send->net_name, (long)pi->send->bytes_total,
-					(long)pi->send->mod_time);
-			}
-			else
-				/* No more files */
-				nofiles = TRUE;
-		}
-		
-		if( send_file && bpi.opos == 0 && bpi.n_msgs == 0 )
-		{
-			if( (n = p_tx_readfile(bpi.obuf + BINKP_BLK_HDRSIZE,
-			                       4096, pi)) < 0 )
-			{
-				p_tx_fclose(pi);
-				send_file = FALSE;
-			}
-			else
-			{
-				binkp_puthdr(bpi.obuf, (unsigned)(n & 0x7fff));
-				bpi.opos = n + BINKP_BLK_HDRSIZE;
-				pi->send->bytes_sent += n;
-				if( pi->send->eofseen )
-				{
-					wait_got = TRUE; send_file = FALSE;
-					pi->send->status = FSTAT_WAITACK;
-				}
-			}
-		}
-
-		if( nofiles && !wait_got && !sent_EOB )
-		{
-			sent_EOB = TRUE;
-			binkp_queuemsg(&bpi, BPMSG_EOB, NULL, NULL);
-		}
-
+  s_binkp_sysinfo *remote;
+  enum {
+    BPT_Start_Send_File,
+    BPT_Wait_M_GET,
+    BPT_Send_File,
+    BPT_Wait_M_GOT,
+    BPT_No_Files,
+    BPT_EOB
+  } binkp_send_state = BPT_Start_Send_File;
+  remote = (s_binkp_sysinfo *) state.handshake->remote_data;
+  binkp_init_bpinfo(&bpi);
+  while (1) {
+    if (binkp_send_state == BPT_Start_Send_File) {
+      if (p_tx_fopen (pi)) {
+        binkp_send_state = BPT_No_Files;
+      } else {
+	char *name  =        pi->send->net_name;
+	long  total = (long) pi->send->bytes_total;
+	long  time  = (long) pi->send->mod_time;
+	if (remote->options & BINKP_OPT_NR) {
+	  binkp_queuemsgf(&bpi,BPMSG_FILE,"%s %ld %ld -1",name,total,time);
+	  binkp_send_state = BPT_Wait_M_GET;
+	} else {
+	  binkp_queuemsgf(&bpi,BPMSG_FILE,"%s %ld %ld 0", name,total,time);
+	  binkp_send_state = BPT_Send_File;
+	}
+      }
+    }
+    if (binkp_send_state == BPT_Send_File) {
+      if (bpi.opos == 0 && bpi.n_msgs == 0) {
+	if((n = p_tx_readfile (bpi.obuf+BINKP_BLK_HDRSIZE,4096,pi))<0) {
+	  p_tx_fclose (pi);
+	  binkp_send_state = BPT_Start_Send_File;
+	} else {
+	  binkp_puthdr (bpi.obuf, (unsigned) (n & 0x7fff));
+	  bpi.opos = n + BINKP_BLK_HDRSIZE;
+	  pi->send->bytes_sent += n;
+	  if (pi->send->eofseen) {
+	    pi->send->status = FSTAT_WAITACK;
+	    if (remote->options & BINKP_OPT_NR)
+	         binkp_send_state = BPT_Wait_M_GOT;
+	    else binkp_send_state = BPT_Start_Send_File;
+	  }
+	}
+      }
+    }
+    if (binkp_send_state == BPT_No_Files) {
+      for (i = 0; i < pi->n_sentfiles; i++) {
+        if (pi->sentfiles[i].status == FSTAT_WAITACK) break;
+      }
+      if (i == pi->n_sentfiles) {
+        binkp_queuemsg (&bpi, BPMSG_EOB, NULL, NULL);
+        binkp_send_state = BPT_EOB;
+      }
+    }
+    /* End of the current batch (start the next batch if need). */
+    if (binkp_send_state == BPT_EOB && rcvd_EOB) {
+      if (remote->options & BINKP_OPT_MB && bpi.msgs_in_batch > 2) {
+	bpi.msgs_in_batch = 0;
+	binkp_send_state = BPT_Start_Send_File;
+	rcvd_EOB = FALSE;
+	continue;
+      }
+      break;
+    }
 		recv_ready = send_ready = FALSE;
 		if( tty_select(&recv_ready, (bpi.opos || bpi.n_msgs) ?
 		               &send_ready : NULL, bpi.timeout) < 0 )
@@ -464,8 +493,8 @@ int binkp_transfer(s_protinfo *pi)
 		if( send_ready && (send_rc = binkp_send(&bpi)) < 0 )
 			gotoexit(PRC_ERROR);
 	
-		switch(recv_rc) {
-		case BPMSG_NONE:
+    switch(recv_rc) {
+      case BPMSG_NONE:
 			break;
 		case BPMSG_DATA: /* Got new data block */
 			if( recv_file )
@@ -533,26 +562,29 @@ int binkp_transfer(s_protinfo *pi)
 			break;
 			
 		case BPMSG_FILE:
-			if( recv_file )
-				{ p_rx_fclose(pi); recv_file = FALSE; }
 			
 			if( binkp_parsfinfo(bpi.ibuf+1, &fname,
 			    &fsize, &ftime, &foffs) )
 			{
+				log ("BinkP error: M_FILE: %s", bpi.ibuf + 1);
 				binkp_queuemsg(&bpi, BPMSG_ERR, "FILE: ", "unparsable arguments");
 				goto FinishSession;
 			}
 			
 			if( pi->recv && !p_compfinfo(pi->recv, fname, fsize, ftime)
-			 && pi->recv->bytes_skipped == foffs )
+			 && pi->recv->bytes_skipped == foffs && pi->recv->fp )
 			{
 				recv_file = TRUE;
 				break;
 			}
 			
+			if (recv_file) {
+			  p_rx_fclose (pi);
+			  recv_file = FALSE;
+			}
 			switch(p_rx_fopen(pi, fname, fsize, ftime, 0)) {
 			case 0:
-				if( pi->recv->bytes_skipped == 0 )
+				if (pi->recv->bytes_skipped == foffs)
 				{
 					recv_file = TRUE;
 					break;
@@ -588,58 +620,43 @@ int binkp_transfer(s_protinfo *pi)
 			rcvd_EOB = TRUE;
 			break;
 			
-		case BPMSG_GOT:
-		case BPMSG_SKIP:
-			if( binkp_parsfinfo(bpi.ibuf+1, &fname, &fsize, &ftime, NULL) == 0 )
-			{
-				if( send_file && !p_compfinfo(pi->send, fname, fsize, ftime) )
-				{
-					/* We got GOT/SKIP for current file! */
-					if( recv_rc == BPMSG_GOT )
-						pi->send->status = FSTAT_SKIPPED;
-					else
-						pi->send->status = FSTAT_REFUSED;
-					p_tx_fclose(pi);
-					send_file = FALSE;
-					break;
-				}
-				
-				wait_got = FALSE;
-				
-				for( i = 0; i < pi->n_sentfiles; i++ )
-				{
-					if( pi->sentfiles[i].status == FSTAT_WAITACK
-					 && !p_compfinfo(&pi->sentfiles[i], fname, fsize, ftime) )
-					{
-						s_finfo *tmp = pi->send;
-						
-						pi->send = &pi->sentfiles[i];
-						if( recv_rc == BPMSG_GOT )
-							pi->send->status = FSTAT_SUCCESS;
-						else
-							pi->send->status = FSTAT_REFUSED;
-						p_tx_fclose(pi);
-						
-						pi->send = tmp;
-						break;
-					}
-					else if( pi->sentfiles[i].status == FSTAT_WAITACK )
-						wait_got = TRUE;
-				}
+      case BPMSG_GOT:
+      case BPMSG_SKIP:
+	if (binkp_parsfinfo (bpi.ibuf+1,&fname,&fsize,&ftime,NULL)) {
+	  char *m = recv_rc == BPMSG_GOT ? "M_GOT" : "M_SKIP";
+	  binkp_queuemsgf (&bpi, BPMSG_ERR, "%s: %s", m, bpi.ibuf + 1);
+	  log ("BinkP error: %s: %s", m, bpi.ibuf + 1);
+	  binkp_send_state = BPT_No_Files;
+	  rc = PRC_ERROR;
+	  break;
+	}
+	for(i = 0; i < pi->n_sentfiles; i++ ) {
+	  if (!p_compfinfo (&pi->sentfiles[i], fname, fsize, ftime)) {
+	    s_finfo *tmp = pi->send;
+	    pi->send = &pi->sentfiles[i];
+	    if (recv_rc == BPMSG_SKIP) {
+	      pi->send->status = FSTAT_REFUSED;
+	    } else {
+	      if (pi->send->status == FSTAT_WAITACK) {
+	        pi->send->status = FSTAT_SUCCESS;
+	      } else {
+		pi->send->status = FSTAT_SKIPPED;
+	      }
+	    }
+	    p_tx_fclose(pi);
+	    pi->send = tmp;
+	    break;
+	  }
+	}
+	if (!strcmp (pi->send->net_name, fname)) {
+	  if (binkp_send_state == BPT_Send_File 	||
+	      binkp_send_state == BPT_Wait_M_GET	||
+	      binkp_send_state == BPT_Wait_M_GOT)	{
+	      binkp_send_state =  BPT_Start_Send_File;
+	  }
+	}
+	break;
 
-				/*
-				 * Check, maybe there are files still
-				 * waiting for the GOT/SKIP acknwoledge
-				 */
-				while( i < pi->n_sentfiles && !wait_got )
-				{
-					if( pi->sentfiles[i].status == FSTAT_WAITACK )
-						wait_got = TRUE;
-					++i;
-				}
-			}
-			break;
-			
 		case BPMSG_ERR:
 			log("remote report error: \"%s\"", bpi.ibuf+1);
 			gotoexit(PRC_ERROR);
@@ -653,13 +670,13 @@ int binkp_transfer(s_protinfo *pi)
 		case BPMSG_GET:
 			if( binkp_parsfinfo(bpi.ibuf+1, &fname, &fsize, &ftime, &foffs) == 0 )
 			{
-				if( send_file && !p_compfinfo(pi->send, fname, fsize, ftime) )
+				if(!p_compfinfo(pi->send,fname,fsize,ftime))
 				{
 					if( fseek(pi->send->fp, foffs, SEEK_SET) == -1 )
 					{
 						log("cannot send file from requested offset %ld", (long)foffs);
 						p_tx_fclose(pi);
-						send_file = FALSE;
+						binkp_send_state = BPT_Start_Send_File;
 					}
 					else
 					{
@@ -670,6 +687,7 @@ int binkp_transfer(s_protinfo *pi)
 						binkp_queuemsgf(&bpi, BPMSG_FILE, "%s %ld %ld %ld",
 							pi->send->net_name, (long)pi->send->bytes_total,
 							(long)pi->send->mod_time, (long)foffs);
+						binkp_send_state = BPT_Send_File;
 					}
 				}
 			}
