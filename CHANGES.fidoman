@@ -1,0 +1,5 @@
+=== 2011-12-13 ===
+
+Split inbound feature have added.
+Received files from different links are placed in separate folders in inbound.
+Use option "split_inbound" to enable this feature.
