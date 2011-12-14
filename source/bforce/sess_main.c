@@ -311,14 +311,36 @@ int session_set_inbound(void)
 	struct stat st;
 	char *p_inb;
 	
-	if( (p_inb = conf_string(cf_inbound_directory)) )
-	{
-		state.inbound = (char*)xstrcpy(p_inb);
+	p_inb = conf_string(cf_inbound_directory);
+	if( !p_inb ) {
+		log("no inbound specified, assume current directory");
+		p_inb = "./";
 	}
-	else
-	{
-		log("no inbound specified, assume \"./\"");
-		state.inbound = (char*)xstrcpy("./");
+	
+	if( conf_boolean(cf_split_inbound) ) {
+		char buf[500];		
+		if( state.node.addr.point ) {
+		    sprintf( buf, "%s%d:%d/%d.%d/%s-in/",
+			p_inb,
+			state.node.addr.zone,
+			state.node.addr.net,
+			state.node.addr.node,
+			state.node.addr.point,
+			state.protected? "pwd": "unchecked" );
+		 } else {
+		    sprintf( buf, "%s%d:%d/%d/%s-in/",
+			p_inb,
+			state.node.addr.zone,
+			state.node.addr.net,
+			state.node.addr.node,
+			state.protected? "pwd": "unchecked" );
+		}
+		log("inbound: %s", buf);
+		state.inbound = (char*)xstrcpy(buf);
+		sprintf( buf, "/bin/mkdir -p %s -m 700", state.inbound );
+		system( buf );
+	} else {
+		state.inbound = (char*)xstrcpy(p_inb);
 	}
 
 	state.tinbound = (char*)xstrcpy(state.inbound);
