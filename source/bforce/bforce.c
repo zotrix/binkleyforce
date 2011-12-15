@@ -449,8 +449,6 @@ int main(int argc, char *argv[], char *envp[])
 	(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
 #endif
 	
-	printf("split_inb: %s\n", conf_boolean(cf_split_inbound)?"yes":"no");
-	
 	if( opts.daemon )
 		rc = bforce_daemon(&opts);
 	else if( role )
