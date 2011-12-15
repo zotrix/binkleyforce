@@ -1,3 +1,7 @@
+=== 2011-12-15 ===
+
+Patch io_unix_tio.diff for OpenBSD systems running telnetted serial modem.
+
 === 2011-12-13 ===
 
 Split inbound feature have added.
