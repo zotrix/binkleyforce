@@ -59,6 +59,9 @@ bool modem_isgood_phone(const char *str)
 	if( string_casestr(str, "none") )
 		return FALSE;
 
+	if( string_casestr(str, "00-00-000000") )
+		return FALSE;
+
 	return TRUE;
 }
 

@@ -174,8 +174,8 @@ s_conf_entry bforce_config[BFORCE_NUMBER_OF_KEYWORDS+1] = {
 #ifdef DEBUG
 	CONF_KEY(debug_file,                 CT_STRING),
 	CONF_KEY(debug_level,                CT_DEBLEVEL),
-	CONF_KEY(split_inbound,                CT_BOOLEAN),
 #endif
+	CONF_KEY(split_inbound,                CT_BOOLEAN),
 	CONF_END()
 };
 
