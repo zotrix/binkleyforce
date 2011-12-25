@@ -320,22 +320,24 @@ int session_set_inbound(void)
 	if( conf_boolean(cf_split_inbound) )
 	{
 		char buf[PATH_MAX+31];
-		if( state.node.addr.point ) {
-		    snprintf( buf, PATH_MAX, "%s%d:%d/%d.%d/%s-in/",
+		//if( state.node.addr.point ) {
+//		    snprintf( buf, PATH_MAX, "%s%d:%d/%d.%d/%s-in/",
+		    snprintf( buf, PATH_MAX, "%s%d.%d.%d.%d/%s-in/",
 			p_inb,
 			state.node.addr.zone,
 			state.node.addr.net,
 			state.node.addr.node,
 			state.node.addr.point,
 			state.protected? "pwd": "unchecked" );
-		 } else {
-		    snprintf( buf, PATH_MAX, "%s%d:%d/%d/%s-in/",
+		 /*} else {
+//		    snprintf( buf, PATH_MAX, "%s%d:%d/%d/%s-in/",
+		    snprintf( buf, PATH_MAX, "%s%d.%d.%d/%s-in/",
 			p_inb,
 			state.node.addr.zone,
 			state.node.addr.net,
 			state.node.addr.node,
 			state.protected? "pwd": "unchecked" );
-		}
+		}  */
 		log("inbound: %s", buf);
 		state.inbound = (char*)xstrcpy(buf);
 		snprintf( buf, PATH_MAX+30, "/bin/mkdir -p %s -m 700", state.inbound ); /* 30 additional chars allowed */
@@ -804,6 +806,7 @@ int session(void)
 		/*
 		 * Log expected traffic
 		 */
+		 
 		session_traffic();
 		
 		init_protinfo(&pi, state.caller);
@@ -854,6 +857,7 @@ int session(void)
 		/*
 		 * Do session clenup (remove temp. files, etc.)
 		 */
+		 
 		(void)p_session_cleanup(&pi, (rc == BFERR_NOERROR));
 		
 		if( rc == BFERR_NOERROR )
@@ -898,9 +902,11 @@ int session(void)
 		 */
 		if( (p = conf_string(cf_run_after_session)) )
 			session_run_command(p);
+
 	}
 	
 exit:
+
 	state.session_rc = rc;
 	session_update_history(&traff_send, &traff_recv, rc);
 	

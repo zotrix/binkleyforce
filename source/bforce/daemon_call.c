@@ -52,78 +52,19 @@ static int daemon_call_branch(s_sysentry *syst, const char *lockdir, s_modemport
 	signal(SIGUSR1, SIG_DFL);
 	signal(SIGUSR2, SIG_DFL);
 
-	/*
-	 * Initialise ``state'' information structure
-	 */
-	init_state(&state);
-	state.caller    = TRUE;
-	state.valid     = TRUE;
-	state.node      = syst->node;
-	state.listed    = syst->node.listed;
-	state.modemport = (!syst->tcpip) ? port : NULL;
-	if( syst->lineptr )
-		state.override = *syst->lineptr;
-	if( *state.node.addr.domain )
-		*state.node.addr.domain = '\0';
+        s_bforce_opts opts;
+        // TODO: add hiddenline round-robin
+        opts.hiddline=0;
+        opts.runmode = MODE_CALL_DEFAULT;
+        opts.ipproto = NULL;
+        opts.phone = NULL;
+        opts.force = 0;
+        opts.inetd = 0;
+        opts.connect = NULL;
+        opts.device = NULL;
 
-	/*
-	 * Apply overrides to the node information
-	 */	
-	if( state.override.sFlags )
-	{
-		strnxcat(state.node.flags, ",", sizeof(state.node.flags));
-		strnxcat(state.node.flags, state.override.sFlags, sizeof(state.node.flags));
-	}
-
-	if( !syst->tcpip && state.override.sPhone )
-		(void)strnxcpy(state.node.phone, state.override.sPhone, sizeof(state.node.phone));
-	else if( syst->tcpip && state.override.sIpaddr )
-		(void)strnxcpy(state.node.phone, state.override.sIpaddr, sizeof(state.node.phone));
-
-	/*
-	 * Try to lock address of system we are going to call
-	 */
-#ifdef BFORCE_USE_CSY
-	if( out_bsy_lock(state.node.addr, TRUE) )
-#else
-	if( out_bsy_lock(state.node.addr) )
-#endif
-		gotoexit(BFERR_SYSTEM_LOCKED);
-	
-	setproctitle("bforce calling %s, %s",
-		ftn_addrstr(abuf, state.node.addr), state.node.phone);
-	
-/*	if( ( syst->tcpip ) || (strcmp(state.node.phone,NO_PSTN_PHONE)== 0) ) */
-	if( syst->tcpip )
-	{
-		rc = call_system_tcpip();
-	}
-	else /* via Modem */
-	{
-		state.modemport = port;
-		if( port_lock(lockdir, state.modemport) )
-		{
-			log("cannot lock modem port");
-			rc = BFERR_PORTBUSY;
-		}
-		else /* Locked port */
-		{
-			rc = call_system_modem();
-			port_unlock(lockdir, state.modemport);
-		}
-	}
-
-exit:
-	out_bsy_unlockall();
-
-	log("session rc = %d (\"%s\")", rc, BFERR_NAME(rc));
-
-	(void)session_stat_update(&state.node.addr,
-			&state.sess_stat, TRUE, rc);
-
-	deinit_state(&state);
-		
-	return rc;
+//        log("doing call_system");
+	return call_system(syst->node.addr, &opts);
 }
 
 int daemon_call(s_sysentry *syst)

@@ -70,26 +70,39 @@ static void print_compiled_configuration(void)
 static void usage(void)
 {
 	printf_usage(NULL,
-		"usage: bforce [-fmh] [-I<include>] [-n<phone>] [-l<line_number>]\n"
-		"              [-a<ip_address>] [-S<connect>] [-p<device>] <node>\n"
-		"       bforce [-ih] [-I<include>] [-S<connect>]\n"
-		"              <tsync|yoohoo|emsi|binkp|auto> (this implies slave mode)\n"
-		"       bforce [-dh] [-C<config>] [-I<include>]\n"
+		"call:\n"
+		"  use nodelist and config overrides\n"
+		"    bforce [-f] [-I<include>] [-p<device>] <node>\n"
+		"  use modem\n"
+		"    bforce [-f] [-I<include>] -n<phone> [-l<line_number>] \n"
+		"              [-p<device>] <node>\n"
+		"  use TCP/IP\n"
+		"    bforce [-I<include>] [-a<ip_address>] -u proto <node>\n"
+		"  start on stdio\n"
+		"    bforce [-f] [-I<include>] -o <node>\n"
+		"\n"
+		"answer:\n"
+		"  bforce [-i] [-I<include>] [-S<connect>]\n"
+		"     <tsync|yoohoo|emsi|binkp|auto>\n"
+		"\n"
+		"start daemon:\n"
+		"  bforce -d [-C<config>] [-I<include>]\n"
+		"\n"
+		"stop daemon:\n"
+		"  bforce -q [-C<config>] [-I<include>]\n"
 		"\n"
 		"options:\n"
-		"  -d                run as daemon\n"
-		"  -q                terminate daemon\n"
-		"  -i                run from inetd (for slave mode only)\n"
-		"  -f                ignore system's work time\n"
-		"  -o                starts outgoing session on stdin/stdout\n"
-		"  -C <config>       main config file name (\"%s\")\n"
-		"  -I <config>       additional config file name\n"
-		"  -n <phone>        override phone number\n"
-		"  -l <line_number>  call on this hidden line (default is 0) \n"
-		"  -a <ip_address>   override internet address\n"
-		"  -S <connect_str>  connect string (for slave mode only)\n"
-		"  -p <port>         override modem port (must be defined in config)\n"
-		"  -h                show this help message\n"
+		"  -i                      run from inetd (for slave mode only)\n"
+		"  -f                      ignore system's work time\n"
+		"  -C <config>             main config file name (\"%s\")\n"
+		"  -I <config>             additional config file name (one allowed)\n"
+		"  -n <phone>              override phone number\n"
+		"  -l <line_number>        call on this hidden line (default is 0) \n"
+		"  -a <ip_address>         override internet address\n"
+		"  -S <connect_str>        connect string (for slave mode only)\n"
+		"  -p <port>               override modem port (must be defined in config)\n"
+		"  -u binkp|ifcico|telnet  protocol to use over TCP/IP\n"
+		"  -h                      show this help message\n"
 		"\n",
 		conf_getconfname()
 	);
@@ -194,7 +207,7 @@ static int bforce_master(const s_bforce_opts *opts)
 	{
 		int callopt = 0;
 		
-		if( opts->iaddr ) callopt |= CALLOPT_INET;
+		if( opts->runmode == MODE_CALL_IP ) callopt |= CALLOPT_INET;
 		if( opts->force ) callopt |= CALLOPT_FORCE;
 		
 		rc = call_system(tmpl->addr, opts);
@@ -232,110 +245,99 @@ static int bforce_daemon(const s_bforce_opts *opts)
 	
 	return daemon_run(opts->confname, opts->incname, opts->quit);
 }
-				
+
 int main(int argc, char *argv[], char *envp[])
 {
 	s_bforce_opts opts;
 	int rc = 0;
 	int ch = 0;
-	int role = 0;
+	opts.runmode = MODE_UNDEFINED;
 	
 	memset(&opts, '\0', sizeof(s_bforce_opts));
 	
-	while( (ch=getopt(argc, argv, "hodqr:ifC:I:n:l:a:S:p:")) != EOF )
+	// parsing
+	
+	while( (ch=getopt(argc, argv, "hfI:p:n:l:a:u:oiC:S:dq")) != EOF )
 	{
 		switch( ch ) {
 		case 'h':
 			usage();
 			exit(BFERR_NOERROR);
-		case 'd':
-			if( opts.inetd || opts.force || opts.phone
-			 || opts.hiddline || opts.iaddr || opts.connect
-			 || opts.device || opts.quit )
-				{ usage(); exit(BFERR_FATALERROR); }
-			else
-				{ opts.daemon = 1; }
-			break;
-		case 'q':
-			if( opts.inetd || opts.force || opts.phone
-			 || opts.hiddline || opts.iaddr || opts.connect
-			 || opts.device || opts.daemon )
-				{ usage(); exit(BFERR_FATALERROR); }
-			else
-				{ opts.daemon = 1; opts.quit = 1; }
-			break;
-		case 'i':
-			if( opts.daemon )
-				{ usage(); exit(BFERR_FATALERROR); }
-			else
-				{ opts.inetd = 1; }
-			break;
 		case 'f':
-			if( opts.daemon )
-				{ usage(); exit(BFERR_FATALERROR); }
-			else
-				{ opts.force = 1; }
-			break;
-		case 'o':
-			if( opts.dontcall )
-				{ usage(); exit(BFERR_FATALERROR); }
-			else
-				{ opts.dontcall = TRUE; }
-			break;
-		case 'C':
-			if( opts.confname ) free(opts.confname);
-			if( optarg ) opts.confname = (char *)xstrcpy(optarg);
+			if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_CALL_MODEM;
+			if( opts.runmode != MODE_CALL_MODEM || opts.force ) { usage(); exit(BFERR_FATALERROR); }
+			opts.force = 1;
 			break;
 		case 'I':
-			if( opts.incname ) free(opts.incname);
-			if( optarg ) opts.incname = (char *)xstrcpy(optarg);
-			break;
-		case 'n':
-			if( opts.daemon )
-				{ usage(); exit(BFERR_FATALERROR); }
-			else
-			{
-				if( opts.phone ) free(opts.phone);
-				if( optarg ) opts.phone = (char *)xstrcpy(optarg);
-			}
-			break;
-		case 'l':
-			if( ISDEC(optarg) && opts.daemon == 0 )
-				opts.hiddline = atoi(optarg);
-			else
-				{ usage(); exit(BFERR_FATALERROR); }
-			break;
-		case 'a':
-			if( opts.daemon )
-				{ usage(); exit(BFERR_FATALERROR); }
-			else
-			{
-				if( opts.iaddr ) free(opts.iaddr);
-				if( optarg ) opts.iaddr = (char *)xstrcpy(optarg);
-			}
-			break;
-		case 'S':
-			if( opts.daemon )
-				{ usage(); exit(BFERR_FATALERROR); }
-			else
-			{
-				if( opts.connect ) free(opts.connect);
-				if( optarg ) opts.connect = (char *)xstrcpy(optarg);
-			}
+			if( opts.incname || !optarg ) { usage(); exit(BFERR_FATALERROR); }  //free(opts.incname);
+			opts.incname = (char *)xstrcpy(optarg);
 			break;
 		case 'p':
-			if( opts.daemon )
-				{ usage(); exit(BFERR_FATALERROR); }
-			else
-			{
-				if( opts.device ) free(opts.device);
-				if( optarg ) opts.device = (char *)xstrcpy(optarg);
-			}
+			if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_CALL_MODEM;
+			if( opts.runmode != MODE_CALL_MODEM || opts.device || !optarg ) { usage(); exit(BFERR_FATALERROR); }
+			opts.device = (char *)xstrcpy(optarg);
+			break;
+		case 'n':
+			if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_CALL_MODEM;
+			if( opts.runmode != MODE_CALL_MODEM || opts.phone || !optarg ) { usage(); exit(BFERR_FATALERROR); }
+			//if( opts.phone ) free(opts.phone);
+			opts.phone = (char *)xstrcpy(optarg);
+			break;
+		case 'l':
+			if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_CALL_MODEM;
+			if( opts.runmode != MODE_CALL_MODEM || opts.hiddline || !optarg || ISDEC(optarg) ) { usage(); exit(BFERR_FATALERROR); }
+			opts.hiddline = atoi(optarg);
+			break;
+		case 'a':
+			if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_CALL_IP;
+			if( opts.runmode != MODE_CALL_IP || opts.iphost || !optarg ) { usage(); exit(BFERR_FATALERROR); }
+			opts.iphost = (char *)xstrcpy(optarg);
+			break;
+		case 'u':
+			if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_CALL_IP;
+			if( opts.runmode != MODE_CALL_IP || opts.ipproto || !optarg ) { usage(); exit(BFERR_FATALERROR); }
+			opts.ipproto = (char *)xstrcpy(optarg);
+			break;
+		case 'o':
+			if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_CALL_STDIO;
+			if( opts.runmode != MODE_CALL_STDIO || opts.usestdio ) { usage(); exit(BFERR_FATALERROR); }
+			opts.usestdio = TRUE;
+			break;
+		case 'i':
+			//if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_ANSWER;
+			//if( opts.runmode != MODE_ANSWER || opts.inetd ) { usage(); exit(BFERR_FATALERROR); }
+			opts.inetd = 1;
+			break;
+		case 'C':
+			if( opts.confname || !optarg ) { usage(); exit(BFERR_FATALERROR); }
+			opts.confname = (char *)xstrcpy(optarg);
+			break;
+		case 'S':
+			if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_ANSWER;
+			if( opts.runmode != MODE_ANSWER || opts.connect || !optarg ) { usage(); exit(BFERR_FATALERROR); }
+			opts.connect = (char *)xstrcpy(optarg);
+			break;
+		case 'd':
+			if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_DAEMON;
+			if( opts.runmode != MODE_DAEMON || opts.daemon || opts.quit ) { usage(); exit(BFERR_FATALERROR); }
+			opts.daemon = 1;
+			break;
+		case 'q':
+			if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_DAEMON;
+			if( opts.runmode != MODE_DAEMON || opts.quit ) { usage(); exit(BFERR_FATALERROR); }
+			opts.quit = 1;
+			opts.daemon = 1;
 			break;
 		default :
 			usage();
 			exit(BFERR_FATALERROR);
 		}
+	}
+	
+	if( opts.inetd && opts.runmode != MODE_ANSWER && opts.runmode != MODE_CALL_STDIO )
+	{
+		usage();
+		exit(BFERR_FATALERROR);
 	}
 	
 	/* Expression checker use it, so init first */
@@ -368,37 +370,45 @@ int main(int argc, char *argv[], char *envp[])
 		
 			if( strcasecmp(p, "tsync") == 0 )
 			{
-				role = 0;
+				if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_ANSWER;
+				if( opts.runmode != MODE_ANSWER || opts.stype ) { usage(); exit(BFERR_FATALERROR); }
 				opts.stype = SESSION_FTSC;
 			}
 			else if( strcasecmp(p, "yoohoo") == 0 )
 			{
-				role = 0;
+				if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_ANSWER;
+				if( opts.runmode != MODE_ANSWER || opts.stype ) { usage(); exit(BFERR_FATALERROR); }
 				opts.stype = SESSION_YOOHOO;
 			}
 			else if( strcasecmp(p, "**EMSI_INQC816") == 0 )
 			{
-				role = 0;
+				if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_ANSWER;
+				if( opts.runmode != MODE_ANSWER || opts.stype ) { usage(); exit(BFERR_FATALERROR); }
 				opts.stype = SESSION_EMSI;
 			}
 			else if( strncasecmp(p, "emsi", 4) == 0 )
 			{
-				role = 0;
+				if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_ANSWER;
+				if( opts.runmode != MODE_ANSWER || opts.stype ) { usage(); exit(BFERR_FATALERROR); }
 				opts.stype = SESSION_EMSI;
 			}
 			else if( strcasecmp(p, "binkp") == 0 )
 			{
-				role = 0;
+				if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_ANSWER;
+				if( opts.runmode != MODE_ANSWER || opts.stype ) { usage(); exit(BFERR_FATALERROR); }
 				opts.stype = SESSION_BINKP;
 			}
 			else if( strcasecmp(p, "auto") == 0 )
 			{
-				role = 0;
+				if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_ANSWER;
+				if( opts.runmode != MODE_ANSWER || opts.stype ) { usage(); exit(BFERR_FATALERROR); }
 				opts.stype = SESSION_UNKNOWN;
 			}
 			else if( ftn_addrparse(&addr, p, FALSE) == 0 )
 			{
-				role = 1;
+				if( opts.runmode == MODE_UNDEFINED ) opts.runmode = MODE_CALL_DEFAULT;
+				if( opts.runmode != MODE_CALL_DEFAULT && opts.runmode != MODE_CALL_IP &&
+				    opts.runmode != MODE_CALL_MODEM && opts.runmode != MODE_CALL_STDIO ) { usage(); exit(BFERR_FATALERROR); }
 				(*alist) = (s_falist*)xmalloc(sizeof(s_falist));
 				memset(*alist, '\0', sizeof(s_falist));
 				(*alist)->addr = addr;
@@ -410,12 +420,6 @@ int main(int argc, char *argv[], char *envp[])
 				usage();
 				exit(BFERR_FATALERROR);
 			}
-		}
-
-		if( opts.dontcall && role == 0 )
-		{
-			usage();
-			exit(BFERR_FATALERROR);
 		}
 	}
 	
@@ -449,13 +453,31 @@ int main(int argc, char *argv[], char *envp[])
 	(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
 #endif
 	
-	if( opts.daemon )
-		rc = bforce_daemon(&opts);
-	else if( role )
-		rc = bforce_master(&opts);
-	else
-		rc = bforce_slave(&opts);
+	//char runmode_str[21];
+	//snprintf(runmode_str, 20, "Run mode: %d", opts.runmode);
+	//log(runmode_str);
 	
+	switch( opts.runmode )
+	{
+case MODE_DAEMON:
+		log("Daemon mode");
+		rc = bforce_daemon(&opts);
+		break;
+case MODE_CALL_DEFAULT:
+case MODE_CALL_IP:
+case MODE_CALL_MODEM:
+case MODE_CALL_STDIO:
+		log("Outgoing call");
+		rc = bforce_master(&opts);
+		break;
+case MODE_ANSWER:
+		log("Start answer");
+		rc = bforce_slave(&opts);
+		break;
+default:
+		log("Could not determine run mode");
+	}
+
 exit:
 	
 	deinit_conf();
@@ -475,7 +497,8 @@ static void deinit_opts(s_bforce_opts *opts)
 	if( opts->confname ) free(opts->confname);
 	if( opts->incname  ) free(opts->incname);
 	if( opts->phone    ) free(opts->phone);
-	if( opts->iaddr    ) free(opts->iaddr);
+	if( opts->iphost   ) free(opts->iphost);
+	if( opts->ipproto  ) free(opts->ipproto);
 	if( opts->connect  ) free(opts->connect);
 	if( opts->device   ) free(opts->device);
 	if( opts->addrlist ) deinit_falist(opts->addrlist);
