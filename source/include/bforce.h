@@ -170,19 +170,30 @@ typedef signed char     SINT8;
 typedef struct {
 	bool   daemon;		/* Run as daemon?                 */
 	bool   quit;		/* Quit from daemon               */
-        bool   dontcall;        /* -m key */
+	bool   usestdio;	/* Session on stdin and stdout    */
 	int    inetd;		/* Called from inetd?             */
 	int    force;		/* Force call?                    */
 	int    hiddline;	/* Hidden line number (0,1..)     */
 	char  *confname;	/* Use this config instead def.   */
 	char  *incname;		/* Include this config            */
 	char  *phone;		/* Forced phone number            */
-	char  *iaddr;		/* Forced IP address              */
 	char  *connect;		/* Connect string                 */
 	char  *device;		/* Forced device name             */
-	int    stype;		/* Handshake type in slave mode   */
+	char  *iphost;		/* Forced IP address              */
+	char  *ipproto;		/* proto to use over TCP/IP       */
+	int    stype;		/* Handshake type in slave (answer) mode   */
+	int    runmode;		/* concluded runmode              */
 	s_falist *addrlist;
 } s_bforce_opts;
+
+#define MODE_UNDEFINED (0)
+#define MODE_CALL_DEFAULT (1)
+#define MODE_CALL_MODEM (2)
+#define MODE_CALL_IP (3)
+#define MODE_CALL_STDIO (4)
+#define MODE_ANSWER (5)
+#define MODE_DAEMON (6)
+
 
 /*
  *  Global variables

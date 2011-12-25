@@ -270,6 +270,7 @@ typedef enum {
 	cf_debug_file,
 	cf_debug_level,
 #endif
+	cf_split_inbound,
 	BFORCE_NUMBER_OF_KEYWORDS
 } bforce_config_keyword;
 

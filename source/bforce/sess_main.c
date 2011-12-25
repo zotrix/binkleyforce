@@ -311,14 +311,41 @@ int session_set_inbound(void)
 	struct stat st;
 	char *p_inb;
 	
-	if( (p_inb = conf_string(cf_inbound_directory)) )
+	p_inb = conf_string(cf_inbound_directory);
+	if( !p_inb ) {
+		log("no inbound specified, assume current directory");
+		p_inb = "./";
+	}
+	
+	if( conf_boolean(cf_split_inbound) )
 	{
-		state.inbound = (char*)xstrcpy(p_inb);
+		char buf[PATH_MAX+31];
+		//if( state.node.addr.point ) {
+//		    snprintf( buf, PATH_MAX, "%s%d:%d/%d.%d/%s-in/",
+		    snprintf( buf, PATH_MAX, "%s%d.%d.%d.%d/%s-in/",
+			p_inb,
+			state.node.addr.zone,
+			state.node.addr.net,
+			state.node.addr.node,
+			state.node.addr.point,
+			state.protected? "pwd": "unchecked" );
+		 /*} else {
+//		    snprintf( buf, PATH_MAX, "%s%d:%d/%d/%s-in/",
+		    snprintf( buf, PATH_MAX, "%s%d.%d.%d/%s-in/",
+			p_inb,
+			state.node.addr.zone,
+			state.node.addr.net,
+			state.node.addr.node,
+			state.protected? "pwd": "unchecked" );
+		}  */
+		log("inbound: %s", buf);
+		state.inbound = (char*)xstrcpy(buf);
+		snprintf( buf, PATH_MAX+30, "/bin/mkdir -p %s -m 700", state.inbound ); /* 30 additional chars allowed */
+		system( buf );
 	}
 	else
 	{
-		log("no inbound specified, assume \"./\"");
-		state.inbound = (char*)xstrcpy("./");
+		state.inbound = (char*)xstrcpy(p_inb);
 	}
 
 	state.tinbound = (char*)xstrcpy(state.inbound);
@@ -779,6 +806,7 @@ int session(void)
 		/*
 		 * Log expected traffic
 		 */
+		 
 		session_traffic();
 		
 		init_protinfo(&pi, state.caller);
@@ -829,6 +857,7 @@ int session(void)
 		/*
 		 * Do session clenup (remove temp. files, etc.)
 		 */
+		 
 		(void)p_session_cleanup(&pi, (rc == BFERR_NOERROR));
 		
 		if( rc == BFERR_NOERROR )
@@ -873,9 +902,11 @@ int session(void)
 		 */
 		if( (p = conf_string(cf_run_after_session)) )
 			session_run_command(p);
+
 	}
 	
 exit:
+
 	state.session_rc = rc;
 	session_update_history(&traff_send, &traff_recv, rc);
 	

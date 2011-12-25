@@ -31,7 +31,7 @@
 /* On success: zero   (state.session is handshake type)                      */
 /* On error: non-zero (state.session set to UNKNOWN)                         */
 /* ------------------------------------------------------------------------- */
-int session_init_outgoing(void)
+int session_init_outgoing()
 {
 	int    c = 0;
 	int    tries = 0;
@@ -72,8 +72,10 @@ int session_init_outgoing(void)
 	/*
 	 * Put CR until any character received
 	 */
-	if( PUTCHAR('\r') < 0 || FLUSHOUT() < 0 )
+	if( PUTCHAR('\r') < 0 || FLUSHOUT() < 0 ) {
+		log("error: output");
 		return 1;
+	}
 	
 	while( !CHARWAIT(1) )
 	{
@@ -83,8 +85,10 @@ int session_init_outgoing(void)
 			return 1;
 		}
 		
-		if( PUTCHAR('\r') < 0 || FLUSHOUT() < 0 )
+		if( PUTCHAR('\r') < 0 || FLUSHOUT() < 0 ) {
+			log("error: output");
 			return 1;
+		}
 	}
 	
 #ifdef DEBUG
@@ -122,17 +126,27 @@ int session_init_outgoing(void)
 		{
 			DEB((D_HSHAKE, "tx_sendsync: resyncing"));
 			
-			if( canemsi && PUTSTR("**EMSI_INQC816**EMSI_INQC816") < 0 )
+			if( canemsi && PUTSTR("**EMSI_INQC816**EMSI_INQC816") < 0 ) {
+				log("error: output");
 				return 1;
-			if( canyoohoo && PUTCHAR(YOOHOO) < 0 )
+			}
+			if( canyoohoo && PUTCHAR(YOOHOO) < 0 ) {
+				log("error: output");
 				return 1;
-			if( canftsc && PUTCHAR(TSYNC) < 0 )
+			}
+			if( canftsc && PUTCHAR(TSYNC) < 0 ) {
+				log("error: output");
 				return 1;
-			if( canemsi && PUTCHAR('\r') < 0 )
+			}
+			if( canemsi && PUTCHAR('\r') < 0 ) {
+				log("error: output");
 				return 1;
+			}
 
-			if( FLUSHOUT() < 0 )
+			if( FLUSHOUT() < 0 ) {
+				log("error: flush");
 				return 1;
+			}
 			
 			timer_set(&sync_timer, OUTGOING_SYNC_TIMER);
 		}
@@ -260,10 +274,14 @@ int session_init_outgoing(void)
 						state.session = SESSION_EMSI;
 						
 						if( PUTSTR("**EMSI_INQC816\r") < 0
-						 || PUTSTR("**EMSI_INQC816\r") < 0 )
+						 || PUTSTR("**EMSI_INQC816\r") < 0 ) {
+							log("error: output");
 							return 1;
-						if( FLUSHOUT() < 0 )
+						}
+						if( FLUSHOUT() < 0 ) {
+							log("error: output");
 							return 1;
+						}
 						
 						return 0;
 					}
@@ -281,15 +299,19 @@ int session_init_outgoing(void)
 						sleep(3);
 						
 						if( PUTSTR("**EMSI_INQC816\r") < 0
-						 || FLUSHOUT() < 0 )
+						 || FLUSHOUT() < 0 ) {
+							log("error: flush");
 							return 1;
+						}
 
 						/* Wait for a password prompt */
 						sleep(2);
 						
 						if( PUTSTR("**EMSI_INQC816\r") < 0
-						 || FLUSHOUT() < 0 )
+						 || FLUSHOUT() < 0 ) {
+							log("error: output");
 							return 1;
+						}
 						
 						timer_set(&sync_timer, OUTGOING_SYNC_TIMER);
 					}
@@ -314,6 +336,7 @@ int session_init_outgoing(void)
 					c, string_printable(buf_emsi)));
 		}
 	}
+	//log("session_init_outgoing: end loop");
 
 	return 1;
 }
@@ -325,7 +348,7 @@ int session_init_outgoing(void)
 /*                                                                           */
 /* TODO: It is not working yet, it only reports about EMSI requests.. (1)    */
 /* ------------------------------------------------------------------------- */
-int session_init_incoming(void)
+int session_init_incoming()
 {
 	int    c = 0;
 	int    pos = 0;
@@ -345,42 +368,64 @@ int session_init_incoming(void)
 
 	state.session = SESSION_UNKNOWN;
 	
-	if( (options & OPTIONS_NO_EMSI) != OPTIONS_NO_EMSI )
+	//log("init");
+	
+	if( (options & OPTIONS_NO_EMSI) != OPTIONS_NO_EMSI ) {
+		//log("can emsi");
 		canemsi = TRUE;
-	if( (options & OPTIONS_NO_YOOHOO) != OPTIONS_NO_YOOHOO )
+	}
+	if( (options & OPTIONS_NO_YOOHOO) != OPTIONS_NO_YOOHOO ) {
+		//log("can yahoo");
 		canyoohoo = TRUE;
-	if( (options & OPTIONS_NO_FTS1) != OPTIONS_NO_FTS1 )
+	}
+	if( (options & OPTIONS_NO_FTS1) != OPTIONS_NO_FTS1 ) {
+		//log("can ftsc");
 		canftsc = TRUE;
+	}
 	
 	yoohoo_need = canemsi ? 2 : 1;
 	tsync_need = (canemsi || canyoohoo) ? 2 : 1;
 
-	if( PUTCHAR('\r') < 0 )
+	if( PUTCHAR('\r') < 0 ) {
+		log("error: cannot put char");
 		return 1;
+	}
 	
 	/*
 	 * Output banner
 	 */
-	if( canemsi && PUTSTR("**EMSI_REQA77E\r") < 0 )
+	if( canemsi && PUTSTR("**EMSI_REQA77E\r") < 0 ) {
+		log("error: cannot put banner");
 		return 1;
+	}
 
 	if( state.connstr )
 	{
 		/* Show connect string */
-		if( PUTCHAR('[') < 0 )
+		if( PUTCHAR('[') < 0 ) {
+			log("error: cannot put ']'");
 			return 1;
-		if( PUTSTR(state.connstr) < 0 )
+		}
+		if( PUTSTR(state.connstr) < 0 ) {
+			log("error: cannot put connstr");
 			return 1;
-		if( PUTSTR("]\n") < 0 )
+		}
+		if( PUTSTR("]\n") < 0 ) {
+			log("error: cannot put ']'");
 			return 1;
+		}
 	}
 	
 	if( PUTSTR(BF_BANNERVER) < 0 || PUTCHAR(' ') < 0
-	 || PUTSTR(BF_COPYRIGHT) < 0 || PUTCHAR('\n') < 0 )
+	 || PUTSTR(BF_COPYRIGHT) < 0 || PUTCHAR('\n') < 0 ) {
+		log("session_init_incoming error: output");
 		return 1;
+	}
 
-	if( FLUSHOUT() < 0 )
+	if( FLUSHOUT() < 0 ) {
+		log("session_init_incoming error: flush");
 		return 1;
+	}
 	
 	/* Start timers */
 	timer_set(&mast_timer, INCOMING_MAST_TIMER);
@@ -390,6 +435,8 @@ int session_init_incoming(void)
 	 * Determine supported handshakes on called system
 	 * (support for FTS-1, YooHoo, EMSI)
 	 */
+	 
+	//log("begin loop");
 	while(1)
 	{
 		if( timer_expired(mast_timer) )
@@ -404,11 +451,15 @@ int session_init_incoming(void)
 		{
 			DEB((D_HSHAKE, "rx_init: resyncing"));
 			
-			if( canemsi && PUTSTR("**EMSI_REQA77E\r") < 0 )
+			if( canemsi && PUTSTR("**EMSI_REQA77E\r") < 0 ) {
+				log("session_init_incoming error: output");
 				return 1;
+			}
 
-			if( FLUSHOUT() < 0 )
+			if( FLUSHOUT() < 0 ) {
+				log("session_init_incoming error: flush");
 				return 1;
+			}
 			
 			timer_set(&sync_timer, INCOMING_SYNC_TIMER);
 		}

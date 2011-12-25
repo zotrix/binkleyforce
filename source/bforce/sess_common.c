@@ -36,7 +36,8 @@
  *   $INBOUND
  *   $CONNECT,
  *   $CALLERID,
- *   $RC
+ *   $RC,
+ *   $PEERNAME
  */
 int session_run_command(const char *execstr)
 {
@@ -111,6 +112,10 @@ int session_run_command(const char *execstr)
 	
 		if( state.cidstr && *state.cidstr )
 			exec_env_add(&eopts, "CALLERID", state.cidstr);
+			
+		if( state.peername && *state.peername )
+			exec_env_add(&eopts, "PEERNAME", state.peername);
+				
 		
 		if( state.session_rc >= 0 )
 		{

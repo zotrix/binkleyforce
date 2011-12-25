@@ -82,7 +82,8 @@ enum nodelist_limit
 	BNI_MAXLOCATION = 48,
 	BNI_MAXSYSOP = 48,
 	BNI_MAXPHONE = 48,
-	BNI_MAXFLAGS = 120
+	BNI_MAXHOST = 200,
+	BNI_MAXFLAGS = 200
 };
 
 /*
@@ -148,6 +149,10 @@ typedef struct node
 	char phone[BNI_MAXPHONE+1];
 	long speed;
 	char flags[BNI_MAXFLAGS+1];
+	bool do_binkp;
+	bool do_ifcico;
+	bool do_telnet;
+	char host[BNI_MAXHOST+1];
 	s_timevec worktime;
 }
 s_node;

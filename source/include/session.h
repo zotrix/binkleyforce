@@ -176,8 +176,8 @@ void  init_state(s_state *pstate);
 void  deinit_state(s_state *pstate);
 
 /* s_init.c */
-int   session_init_outgoing(void);
-int   session_init_incoming(void);
+int   session_init_outgoing();
+int   session_init_incoming();
 
 /* s_main.c */
 extern s_state state;
@@ -209,7 +209,7 @@ int   session(void);
 /* sess_call.c */
 int   call_system(s_faddr addr, const s_bforce_opts *opts);
 int   call_system_modem(void);
-int   call_system_tcpip(void);
+int   call_system_tcpip(int callwith);
 
 /* sess_answ.c */
 int   answ_system(e_session type, char *connstr, int inetd);
