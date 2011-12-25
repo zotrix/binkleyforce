@@ -336,7 +336,7 @@ int session_init_outgoing()
 					c, string_printable(buf_emsi)));
 		}
 	}
-	log("session_init_outgoing: end loop");
+	//log("session_init_outgoing: end loop");
 
 	return 1;
 }
@@ -368,18 +368,18 @@ int session_init_incoming()
 
 	state.session = SESSION_UNKNOWN;
 	
-	log("init");
+	//log("init");
 	
 	if( (options & OPTIONS_NO_EMSI) != OPTIONS_NO_EMSI ) {
-		log("can emsi");
+		//log("can emsi");
 		canemsi = TRUE;
 	}
 	if( (options & OPTIONS_NO_YOOHOO) != OPTIONS_NO_YOOHOO ) {
-		log("can yahoo");
+		//log("can yahoo");
 		canyoohoo = TRUE;
 	}
 	if( (options & OPTIONS_NO_FTS1) != OPTIONS_NO_FTS1 ) {
-		log("can ftsc");
+		//log("can ftsc");
 		canftsc = TRUE;
 	}
 	
@@ -436,7 +436,7 @@ int session_init_incoming()
 	 * (support for FTS-1, YooHoo, EMSI)
 	 */
 	 
-	log("begin loop");
+	//log("begin loop");
 	while(1)
 	{
 		if( timer_expired(mast_timer) )
