@@ -667,12 +667,12 @@ int call_system(s_faddr addr, const s_bforce_opts *opts)
 				errmsg = "don't know phone number";
 				gotoexit(BFERR_PHONE_UNKNOWN);
 			}
-		}
+		} else
+		if( !opts->force)
+		{
 	/*
 	 * Is now a working time for that node/line
 	 */
-		if( !opts->force)
-		{
 			time_t unixtime = time(NULL);
 			struct tm *now = localtime(&unixtime);
 			bool goodtime = FALSE;
