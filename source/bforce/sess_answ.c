@@ -81,8 +81,14 @@ int answ_system(e_session type, char *connstr, int inetd)
 			logerr("can't get client address");
 		else
 		{
+#ifdef IPV6
+			>char addr_str[INET6_ADDRSTRLEN+1];
+			state.peername = (char*)xstrcpy(inet_ntop(AF_INET6, client.sin6_addr, addr_str, INET6_ADDRSTRLEN));
+			state.peerport = (long)ntohs(client.sin6_port);
+#else
 			state.peername = (char*)xstrcpy(inet_ntoa(client.sin_addr));
 			state.peerport = (long)ntohs(client.sin_port);
+#endif
 		}
 	}
 	

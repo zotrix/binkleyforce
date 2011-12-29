@@ -11,6 +11,9 @@
  *	$Id$
  */
 
+#define _GNU_SOURCE
+#include <string.h>
+
 #include "includes.h"
 #include "confread.h"
 #include "logger.h"
@@ -49,17 +52,70 @@ struct keyword {
  */
 int nodelist_checkflag(const char *nodeflags, const char *flag)
 {
-	char *p, *q;
+	char *p;
+	const char *searchbase = nodeflags;
+	char *q;
 	
-	if( (p = strstr(nodeflags, flag)) )
+	while( p = strstr(searchbase, flag) )
 	{
-		if( p == nodeflags || *(p-1) == ',' )
+		if( p == searchbase || *(p-1) == ',' )
 		{
 			if( (q = strchr(p, ',')) == NULL || (q - p) == strlen(flag) )
 				return 0;
+			if( (strchrnul(p, ':') - p) == strlen(flag) )
+				return 0;
 		}
+		
+		searchbase = p + 1; // avoid finding again the same
 	}
 	
+	return 1;
+}
+
+/*****************************************************************************
+ * Get value from flag (e.g. INA:host.domain.ru)
+ * 
+ * Arguments:
+ * 	nodeflags pointer to the node's nodelist flags string
+ * 	flag      pointer to the flag that we want to check
+ *	value     pointer to string buffer for result. please allocate
+ *			max possible value of strlen(nodeflags) bytes
+ *
+ * Return value:
+ * 	zero value if flag is presented in flags, and non-zero if not
+ *	res is zero lengh string if no flag or flag is empty
+ */
+
+int nodelist_flagvalue(const char *nodeflags, const char *flag, char *res)
+{
+	char *p, *q;
+	const char *searchbase = nodeflags;
+	int flaglen = strlen(flag);
+	
+	while( p = strstr(searchbase, flag) )
+	{
+		if( p == nodeflags || *(p-1) == ',' ) // match flag
+		{
+			if( *(p+flaglen) == 0 || *(p+flaglen) == ',' )
+			{
+			    // empty flag
+			    res[0]=0;
+			    return 0;
+			}
+			else
+			{
+			    if( *(p+flaglen) == ':' ) {
+				// flag has data
+				p += flaglen + 1; // start of data
+				q = strchrnul(p, ','); // end of data: comma or EOS
+				strncpy(res, p, q-p);
+				return 0;
+			    }
+			}
+		}
+		searchbase = p + 1;
+	}
+	res[0] = 0;
 	return 1;
 }
 
@@ -230,6 +286,12 @@ int nodelist_parsestring(s_node *node, char *str)
 			}
 		}
 	}
+	
+	node->do_binkp = nodelist_checkflag(node->flags, "IBN") == 0;
+	node->do_ifcico = nodelist_checkflag(node->flags, "IFC") == 0;
+	node->do_telnet = nodelist_checkflag(node->flags, "ITN") == 0;
+	
+	nodelist_flagvalue(node->flags, "INA", node->host);
 	
 	return 0;
 }
