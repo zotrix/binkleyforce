@@ -19,6 +19,13 @@
 #include "io.h"
 #include "session.h"
 
+#define CALL_STDIO		(1)
+#define CALL_MODEM		(2)
+#define CALL_TCPIP_BINKP	(4)
+#define CALL_TCPIP_IFCICO	(8)
+#define CALL_TCPIP_TELNET	(16)
+#define CALL_TCPIP_ANY		(CALL_TCPIP_BINKP | CALL_TCPIP_IFCICO | CALL_TCPIP_TELNET)
+
 #ifdef XXXX
 /* Unused */
 int call_system_modem_init(TIO *old_tio_settings)
@@ -254,8 +261,14 @@ int call_system_quiet(const char *connstr, bool inet)
 			logerr("can't get client address");
 		else
 		{
+#ifdef IPV6
+			char addr_str[INET6_ADDRSTRLEN+1];
+			state.peername = (char*)xstrcpy(inet_ntop(AF_INET6, client.sin6_addr, addr_str, INET6_ADDRSTRLEN));
+			state.peerport = (long)ntohs(client.sin6_port);
+#else
 			state.peername = (char*)xstrcpy(inet_ntoa(client.sin_addr));
 			state.peerport = (long)ntohs(client.sin_port);
+#endif
 		}
 	}
 	
@@ -319,6 +332,9 @@ int call_system_modem(void)
 	const char *p_suffstr  = NULL; /* Modem dial suffix string */
 	const char *p_hangstr  = NULL; /* Modem hangup string */
 	const char *p_statstr  = NULL; /* Modem statistic string */
+
+	// automatically determine session type
+	state.session = SESSION_UNKNOWN;
 
 	/*
 	 * Set verbal line name to the modem device name
@@ -468,7 +484,7 @@ int call_system_modem(void)
 	return rc;
 }
 
-int call_system_tcpip(void)
+int call_system_tcpip(int callwith) // only TCPIP values
 {
 	char abuf[BF_MAXADDRSTR+1];
 	int rc = BFERR_NOERROR;
@@ -476,8 +492,8 @@ int call_system_tcpip(void)
 	/*
 	 * Set verbal line name to "tcpip" value
 	 */
-	state.linename = xstrcpy("tcpip");
 	
+	state.linename = xstrcpy("tcpip");
 	state.inet = TRUE;
 	
 	/*
@@ -494,34 +510,30 @@ int call_system_tcpip(void)
 	(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
 #endif
 	
-	if( nodelist_checkflag(state.node.flags, "BINKP") == 0 
-	 || nodelist_checkflag(state.node.flags, "IBN") == 0 )
-	{
+	switch( callwith ) {
+case CALL_TCPIP_BINKP:
 		state.tcpmode = TCPMODE_BINKP;
 		state.session = SESSION_BINKP;
-	}
-	else if( nodelist_checkflag(state.node.flags, "TELN") == 0 )
-	{
+		break;
+case CALL_TCPIP_IFCICO:
+		state.tcpmode = TCPMODE_RAW;
+		state.session = SESSION_UNKNOWN;
+		break;
+case CALL_TCPIP_TELNET:
 		state.tcpmode = TCPMODE_TELNET;
 		state.session = SESSION_UNKNOWN;
-	}
-	else if( nodelist_checkflag(state.node.flags, "IFC") == 0 )
-	{
-		state.tcpmode = TCPMODE_RAW;
-		state.session = SESSION_UNKNOWN;
-	}
-	else /* Default is "raw" mode */
-	{
-		state.tcpmode = TCPMODE_RAW;
-		state.session = SESSION_UNKNOWN;
+		break;
+defalt:
+		log("invalid protocol for TCP/IP module");
+		return BFERR_FATALERROR;
 	}
 
 	log("calling %s (%s, %s)",
 		ftn_addrstr(abuf, state.node.addr),
 		(state.node.name  && *state.node.name ) ? state.node.name  : "<none>",
-		(state.node.phone && *state.node.phone) ? state.node.phone : "<none>");
+		(state.node.host && *state.node.host) ? state.node.host : "<none>");
 		
-	if( (rc = tcpip_connect(state.node.phone, state.tcpmode)) == 0
+	if( (rc = tcpip_connect(state.node.host, state.tcpmode)) == 0
 	 && (rc = tcpip_init() == 0) )
 	{
 		TTYSTATUS(1);
@@ -538,117 +550,229 @@ int call_system_tcpip(void)
 
 int call_system(s_faddr addr, const s_bforce_opts *opts)
 {
+	// if added new opts check daemon_call
+	
+	char s[300];
+	snprintf(s, 299, "bforce calling system %d:%d/%d.%d", addr.zone, addr.net, addr.node, addr.point );
+	log(s);
+	
+	// find suitable way of connection and try to make session
+	
         int rc = 0;
         int runrc = 0;
 	char abuf[BF_MAXADDRSTR+1];
 	char *p_lockdir = NULL;
 	char *errmsg = NULL;
-	bool inet = FALSE;
+	int call_mustuse = 0;
+	int call_mayuse = 0;
 
 	init_state(&state);
 
 	state.caller    = TRUE;
 	state.valid     = TRUE;
 	state.node.addr = addr;
+	
 	nodelist_lookup(&state.node, addr);
-	state.listed    = state.node.listed;
-	state.node.addr.domain[0] = '\0'; /* Discard domain for node address */
-
-	if( opts->dontcall )
-		goto do_session;
-
-	/*
-	 * Get node overrides
-	 */
 	if( override_get(&state.override, state.node.addr, opts->hiddline) )
 	{
 		errmsg = "incorrect hidden line number";
 		gotoexit(BFERR_PHONE_UNKNOWN);
 	}
+	
+	state.listed    = state.node.listed;
+	state.node.addr.domain[0] = '\0'; /* Discard domain for node address */
+
+	// 1. If call method specified in cmdline, do use it
+	// 2. If not, use nodelist data and overrides and call all available methods
+	//    If override contains Phone or IP flags, ignore nodelist connect methods (but save INA if not overrided)
+
+	// 1st - get all allowed call ways
+	// 2nd - gather information reqired to call and remove unavailable ways (no info, node does not support)
+
+	call_mayuse = 0;
+
+	if( opts->runmode == MODE_CALL_DEFAULT )
+	{
+		call_mayuse = CALL_MODEM | CALL_TCPIP_ANY;
+	}
+	else if( opts->runmode == MODE_CALL_STDIO )
+	{
+		call_mustuse = CALL_STDIO;
+	}
+	else if( opts->runmode == MODE_CALL_MODEM )
+	{
+		call_mustuse = CALL_MODEM;
+	}
+	else if( opts->runmode == MODE_CALL_IP )
+	{
+		if( strcasecmp(opts->ipproto, "binkp") == 0 )
+		{
+			call_mustuse = CALL_TCPIP_BINKP;
+		}
+		else if ( strcasecmp(opts->ipproto, "ifcico") == 0 )
+		{
+			call_mustuse = CALL_TCPIP_IFCICO;
+		}
+		else if( strcasecmp(opts->ipproto, "telnet") == 0 )
+		{
+			call_mustuse = CALL_TCPIP_TELNET;
+		}
+		else if( opts->ipproto == NULL ) // determine from nodelist/override
+		{
+			call_mayuse = CALL_TCPIP_ANY;
+			call_mustuse = 0;
+		}
+		else
+		{
+			log("Unknown protocol");
+			return -1;
+		}
+	}
+	else
+	{
+		log("Unknown protocol");
+		return -1;
+	}
+	
+	call_mayuse |= call_mustuse; // it simplifies logics: all required is allowed
+
+       //char s[300];
+       //snprintf(s, 299, "initial: may use %d must use %d", call_mayuse, call_mustuse);
+       //log(s);
+
+
+	if( call_mayuse & CALL_MODEM )
+	{
+		// 1. use phone from opts
+		// 2. use overrides
+		// 3. use nodelist
+		
+		if( opts->phone && *opts->phone )
+		{
+			(void)strnxcpy(state.node.phone, opts->phone, sizeof(state.node.phone));
+			//log("phone from options");
+		}
+		else if( state.override.sPhone )
+		{
+			(void)strnxcpy(state.node.phone, state.override.sPhone, sizeof(state.node.phone));
+			//log("phone from override");
+		}
+	
+		if( !modem_isgood_phone(state.node.phone) )
+		{
+			log("bad phone, excluding modem");
+			call_mayuse &= ~CALL_MODEM;
+			if( call_mustuse & CALL_MODEM )
+			{
+				errmsg = "don't know phone number";
+				gotoexit(BFERR_PHONE_UNKNOWN);
+			}
+		} else
+		if( !opts->force)
+		{
+	/*
+	 * Is now a working time for that node/line
+	 */
+			time_t unixtime = time(NULL);
+			struct tm *now = localtime(&unixtime);
+			bool goodtime = FALSE;
+		
+			if( timevec_isdefined(&state.override.worktime) )
+			{
+				goodtime = timevec_isnow(&state.override.worktime, now);
+			}
+			else if( state.override.sFlags )
+			{
+				goodtime = !nodelist_checkflag(state.override.sFlags, "CM");
+			}
+			else if( !opts->hiddline )
+			{
+				if( !nodelist_checkflag(state.node.flags, "CM") )
+					goodtime = TRUE;
+				else
+					goodtime = timevec_isnow(&state.node.worktime, now);
+			}
+			if( !goodtime )
+			{
+				call_mayuse &= ~CALL_MODEM;
+				log("bad worktime, excluding modem");
+				if( call_mustuse & CALL_MODEM )
+				{
+					errmsg = "not works now, try later";
+					gotoexit(BFERR_NOTWORKING);
+				}
+			}
+		}
+	}
+
+//       snprintf(s, 299, "after phone check: may use %d must use %d", call_mayuse, call_mustuse);
+//       log(s);
 
 	/*
 	 * Apply overrides to the node information
 	 */	
+	
 	if( state.override.sFlags )
 	{
 		strnxcat(state.node.flags, ",", sizeof(state.node.flags));
 		strnxcat(state.node.flags, state.override.sFlags, sizeof(state.node.flags));
 	}
 	
-	if( opts->iaddr && *opts->iaddr )
+	// state.node		nodelist
+	// state.override	config
+	// opts			cmdline
+	
+	// filter unavailable protos if not obligated to use it
+	
+	if( !(call_mustuse & CALL_TCPIP_BINKP) && (call_mayuse & CALL_TCPIP_BINKP) )
 	{
-		inet = TRUE;
-		(void)strnxcpy(state.node.phone,
-				opts->iaddr, sizeof(state.node.phone));
+		if( nodelist_checkflag(state.node.flags, "BINKP") != 0 && nodelist_checkflag(state.node.flags, "IBN") != 0 )
+		{
+			call_mayuse &= ~CALL_TCPIP_BINKP;
+		}
 	}
-	else if( opts->phone && *opts->phone )
+
+	if( !(call_mustuse & CALL_TCPIP_IFCICO) && (call_mayuse & CALL_TCPIP_IFCICO) )
 	{
-		(void)strnxcpy(state.node.phone,
-				opts->phone, sizeof(state.node.phone));
+		if( nodelist_checkflag(state.node.flags, "IFC") != 0 && nodelist_checkflag(state.node.flags, "IFC") != 0 )
+		{
+			call_mayuse &= ~CALL_TCPIP_IFCICO;
+		}
+	}
+
+	if( !(call_mustuse & CALL_TCPIP_TELNET) && (call_mayuse & CALL_TCPIP_TELNET) )
+	{
+		if( nodelist_checkflag(state.node.flags, "TELN") != 0 && nodelist_checkflag(state.node.flags, "TLN") != 0 )
+		{
+			call_mayuse &= ~CALL_TCPIP_TELNET;
+		}
+	}
+
+	if( opts->iphost && *opts->iphost )
+	{
+		(void)strnxcpy(state.node.host, opts->iphost, sizeof(state.node.host));
 	}
 	else if( state.override.sIpaddr )
 	{
-		inet = TRUE;
-		(void)strnxcpy(state.node.phone,
-				state.override.sIpaddr, sizeof(state.node.phone));
-	}
-	else if( state.override.sPhone )
-	{
-		(void)strnxcpy(state.node.phone,
-				state.override.sPhone, sizeof(state.node.phone));
+		(void)strnxcpy(state.node.host,
+				state.override.sIpaddr, sizeof(state.node.host));
 	}
 	
-	if( !inet )
+	if( call_mayuse & CALL_TCPIP_ANY && !tcpip_isgood_host(state.node.host) )
 	{
-		if( !modem_isgood_phone(state.node.phone) )
-			errmsg = "don't know phone number";
-	}
-	else
-	{
-		if( !tcpip_isgood_host(state.node.phone) )
+		call_mayuse &= ~CALL_TCPIP_ANY;
+		log("bad host, exclude IP");
+		if( call_mustuse & CALL_TCPIP_ANY )
+		{
 			errmsg = "don't know host name";
-	}
-	
-	if( errmsg )
-		gotoexit(BFERR_PHONE_UNKNOWN);
-	
-	/*
-	 * Is now a working time for that node/line
-	 */
-	if( !inet && !opts->force)
-	{
-		time_t unixtime = time(NULL);
-		struct tm *now = localtime(&unixtime);
-		bool goodtime;
-		
-		if( !opts->hiddline )
-		{
-			if( state.override.sFlags && !nodelist_checkflag(state.override.sFlags, "CM") )
-				goodtime = TRUE;
-			else
-			{
-				if( timevec_isdefined(&state.override.worktime) )
-					goodtime = timevec_isnow(&state.override.worktime, now);
-				else
-				{
-					if( !nodelist_checkflag(state.node.flags, "CM") )
-						goodtime = TRUE;
-					else
-						goodtime = timevec_isnow(&state.node.worktime, now);
-				}
-			}
-		}
-		else
-			goodtime = timevec_isnow(&state.override.worktime, now);
-		
-		if( !goodtime )
-		{
-			errmsg = "not works now, try later";
-			gotoexit(BFERR_NOTWORKING);
+			gotoexit(BFERR_PHONE_UNKNOWN);
 		}
 	}
+
+//       snprintf(s, 299, "after IP check: may use %d must use %d", call_mayuse, call_mustuse);
+//       log(s);
 	
-do_session:
+//do_session:
 	/*
 	 * It's easier to ignore than handle! After connect
 	 * new handlers must be installed, don't worry.
@@ -677,48 +801,69 @@ do_session:
 	     }
 	}
 	
-	setproctitle("bforce calling %.32s, %.32s",
-		ftn_addrstr(abuf, state.node.addr), state.node.phone);
 	
-	if( opts->dontcall )
+	// try allowed methods and break if rc == 0
+	rc = -1;
+
+	if( rc && call_mayuse & CALL_STDIO )
 	{
 		rc = call_system_quiet(opts->connect, opts->inetd);
 	}
-	else if( !inet )
+
+	if( rc && call_mayuse & CALL_TCPIP_BINKP )
 	{
+		rc = call_system_tcpip(CALL_TCPIP_BINKP);
+	}
+
+	if( rc && call_mayuse & CALL_TCPIP_IFCICO )
+	{
+		rc = call_system_tcpip(CALL_TCPIP_IFCICO);
+	}
+
+	if( rc && call_mayuse & CALL_TCPIP_TELNET )
+	{
+		rc = call_system_tcpip(CALL_TCPIP_TELNET);
+	}
+
+	if( rc && call_mayuse & CALL_MODEM )
+	{
+		setproctitle("bforce calling %.32s, %.32s",
+			ftn_addrstr(abuf, state.node.addr), state.node.phone);
+		rc = -1;
 		if( (p_lockdir = conf_string(cf_uucp_lock_directory)) == NULL )
 			p_lockdir = BFORCE_LOCK_DIR;
 		
 		if( opts->device && *opts->device )
 		{
-			if( (state.modemport =
-					modem_getmatch_port(opts->device)) == NULL )
-			{
-				errmsg = "unknown port name";
-				gotoexit(BFERR_PORTBUSY);
-			}
+			state.modemport = modem_getmatch_port(opts->device);
 		}
-		else if( (state.modemport =
-				modem_getfree_port(p_lockdir)) == NULL )
+		else
 		{
-			errmsg = "no free matching ports";
-			gotoexit(BFERR_PORTBUSY);
+			state.modemport = modem_getfree_port(p_lockdir);
 		}
 		
-		if( port_lock(p_lockdir, state.modemport) )
+		if( state.modemport )
 		{
+		
+		    if( port_lock(p_lockdir, state.modemport) == 0 ) /* Successfuly locked port */
+		    {
+		    	rc = call_system_modem();
+		    	port_unlock(p_lockdir, state.modemport);
+		    }
+		    else
+		    {
 			errmsg = "cannot lock modem port";
-			gotoexit(BFERR_PORTBUSY);
+		    }
 		}
-		else /* Successfuly locked port */
+		else
 		{
-			rc = call_system_modem();
-			port_unlock(p_lockdir, state.modemport);
+		    errmsg = "unable to get modem port";
 		}
 	}
-	else
+
+	if( rc )
 	{
-		rc = call_system_tcpip();
+	    log("no connection effort was successful");
 	}
 
 exit:

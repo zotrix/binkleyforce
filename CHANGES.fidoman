@@ -1,3 +1,17 @@
+=== 2011-12-25 ===
+
+Cmdline processing code is partially rewritten.
+New key -u for selection proto for IP session.
+Added code to get node IP address from nodelist (INA flag).
+Some maybe noisy messages in log added.
+Some code rearrangements in session_call.
+Added feature to try all available connection ways if not specified one
+on calls from command line (IP methods then modem).
+
+=== 2011-12-15 ===
+
+Patch io_unix_tio.diff for OpenBSD systems running telnetted serial modem.
+
 === 2011-12-13 ===
 
 Split inbound feature have added.

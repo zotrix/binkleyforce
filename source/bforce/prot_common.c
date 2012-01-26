@@ -1453,10 +1453,12 @@ void init_protinfo(s_protinfo *pi, bool caller)
 {
 	long tmp;
 	long sesslimit;
+
 	
 	memset(pi, '\0', sizeof(s_protinfo));
 	
 	pi->start_time = time(NULL);
+
 
 	if( (pi->buflen = conf_number(cf_recv_buffer_size)) > 0 )
 		pi->buflen = (pi->buflen / 2048) * 2048;
@@ -1471,6 +1473,7 @@ void init_protinfo(s_protinfo *pi, bool caller)
 	else
 		pi->min_cps_time = 60;
 	
+
 	/*
 	 * Set abort time if session limit was specified
 	 */

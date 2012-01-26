@@ -425,7 +425,9 @@ int binkp_transfer(s_protinfo *pi) {
     BPT_EOB
   } binkp_send_state = BPT_Start_Send_File;
   remote = (s_binkp_sysinfo *) state.handshake->remote_data;
+
   binkp_init_bpinfo(&bpi);
+
   while (1) {
     if (binkp_send_state == BPT_Start_Send_File) {
       if (p_tx_fopen (pi)) {
@@ -699,10 +701,12 @@ int binkp_transfer(s_protinfo *pi) {
 		}
 	} /* end of while( !sent_EOB || !rcvd_EOB ) */
 	
+
 FinishSession:
 	if( binkp_flush_queue(&bpi, bpi.timeout) && rc == PRC_NOERROR )
 		rc = PRC_ERROR;
 	
+
 exit:
 	if( pi->send && pi->send->fp ) p_tx_fclose(pi);
 	if( pi->recv && pi->recv->fp ) p_rx_fclose(pi);

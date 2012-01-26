@@ -1,0 +1,1 @@
+To run fido under user not root, do `chmod +x /bin' and manually update group/passwd files (add uucp group and fido user)
