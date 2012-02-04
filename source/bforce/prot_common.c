@@ -199,36 +199,43 @@ int p_tx_fopen(s_protinfo *pi)
 		return 1;
 
 get_next_file:
-	if( prot_get_next_file(&ptrl, pi) || !ptrl )
+	if( prot_get_next_file(&ptrl, pi) )
 		return 1;
-	
-	/* Mark this file as "processed" */
-	ptrl->status = STATUS_SENDING;
 
-	pi->send_left_num  -= 1;
-	pi->send_left_size -= ptrl->size;
+	if( ptrl ) {
 	
-	if( pi->send_left_size < 0 )
+	    /* Mark this file as "processed" */
+	    ptrl->status = STATUS_SENDING;
+
+	    pi->send_left_num  -= 1;
+	    pi->send_left_size -= ptrl->size;
+	
+	    if( pi->send_left_size < 0 )
 		pi->send_left_size = 0;
-	if( pi->send_left_num < 0 )
+	    if( pi->send_left_num < 0 )
 		pi->send_left_num = 0;
+
+	    DEB((D_PROT, "p_tx_fopen: now opening \"%s\"", ptrl->fname));
 	
-	/* Reset MinCPS time counter */
-	pi->tx_low_cps_time = 0;
-	
-	DEB((D_PROT, "p_tx_fopen: now opening \"%s\"", ptrl->fname));
-	
-	if( stat(ptrl->fname, &st) )
-	{
+	    if( stat(ptrl->fname, &st) ) {
 		logerr("send: cannot stat file \"%s\"", ptrl->fname);
 		goto get_next_file;
-	}
+	    }
 	
-	if( (fp = file_open(ptrl->fname, "r")) == NULL )
-	{
+	    if( (fp = file_open(ptrl->fname, "r")) == NULL ) {
 		logerr("send: cannot open file \"%s\"", ptrl->fname);
 		goto get_next_file;
+	    }
+
 	}
+#ifndef NETSPOOL
+	else {
+	    return 1;
+	}
+#endif
+
+	/* Reset MinCPS time counter */
+	pi->tx_low_cps_time = 0;
 
 	/*
 	 * Add new entry to the send files queue
@@ -250,6 +257,25 @@ get_next_file:
 	/*
 	 * Set file information
 	 */
+#ifdef NETSPOOL
+	if( !ptrl ) {
+	    /* send file received through netspool */
+	pi->send->fp          = 0;
+	pi->send->local_name  = "NETSPOOL";
+	pi->send->type        = out_filetype(state.netspool.filename);
+	pi->send->net_name    = recode_file_out(p_convfilename(state.netspool.filename, pi->send->type));
+	pi->send->fname       = NULL;
+	pi->send->mod_time    = time(NULL);
+	pi->send->mode        = 0664;
+	pi->send->bytes_total = state.netspool.length;
+	pi->send->start_time  = time(NULL);
+	pi->send->eofseen     = FALSE;
+	pi->send->status      = FSTAT_PROCESS;
+	pi->send->action      = ACTION_ACKNOWLEDGE;
+	pi->send->flodsc      = -1;
+	} else {
+
+#endif
 	pi->send->fp          = fp;
 	pi->send->local_name  = (char*)xstrcpy(file_getname(ptrl->fname));
 	pi->send->net_name    = recode_file_out(p_convfilename(pi->send->local_name, ptrl->type));
@@ -265,7 +291,11 @@ get_next_file:
 	pi->send->type        = ptrl->type;
 	pi->send->action      = ptrl->action;
 	pi->send->flodsc      = ptrl->flodsc;
-	
+
+#idef NETSPOOL
+	}
+#endif
+
 	if( strcmp(pi->send->local_name, pi->send->net_name) == 0 )
 	{
 		log("send: \"%s\" %d bytes",
@@ -404,6 +434,11 @@ int p_tx_fclose(s_protinfo *pi)
 			else if( errno != ENOENT )
 				logerr("send: cannot truncate file \"%s\"", pi->send->fname);
 			break;
+#ifdef NETSPOOL
+		case ACTION_ACKNOWLEDE:
+			netspool_acknowlede(&state.netspool);
+			break;
+#endif
 		}
 	}
 	
@@ -429,6 +464,24 @@ int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
 	struct stat st;
 	long ftell_pos;
 
+#ifdef NETSPOOL
+	if(pi->send->fname==NULL && strcmp(pi->send->localname, "NETSPOOL")==0 ) {
+	    if( state->state != NS_RECVFILE ) {
+		log("send: wrong netspool state");
+		pi->send->status = FSTAT_SKIPPED;
+		return -2;
+	    }
+	    n = netspool_read(&state.netspool, buffer, buflen);
+	    pi->send->eofseen = state.netspool.length == 0;
+	    if( n==-1 ) {
+		log("send: netspool error");
+		log(netspool->state->error);
+		pi->send->status = FSTAT_SKIPPED;
+		return -2;
+	    }
+	    return n;
+	}
+#endif
 	/*
 	 * Sanity check: read from closed file.
 	 */
@@ -1223,6 +1276,10 @@ void p_session_cleanup(s_protinfo *pi, bool success)
 				logerr("cannot unlink temporary file \"%s\"", ptrl->fname);
 		}
 	}
+	
+#ifdef NETSPOOL
+	netspool_end(&state.netspool);
+#endif
 }
 
 /*****************************************************************************

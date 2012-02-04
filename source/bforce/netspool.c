@@ -188,62 +188,80 @@ void netspool_receive(s_netspool_state *state)
 
 }
 
+int netspool_read(s_netspool_state *state, void *buf, int buflen)
+{
+    int n;
+    if( state->length == 0 ) {
+	puts("everithing is read");
+	return 0;
+    }
+    
+    n = recv(state->socket, buf, state->length>buflen? buflen: state->length, 0);
+
+    if(n==0) {
+	state->state = NS_ERROR;
+	state->error = "remote socket shutdown";
+	return -1;
+    }
+    
+    if(n==-1) {
+	puts("error reading data");
+	printf("%d %s\n", errno, strerror(errno));
+	state->state = NS_ERROR;
+	state->error = "IO error";
+	return -1;
+    }
+
+    state->length -= n;
+    return n;
+}
+
+void netspool_acknowledge(s_netspool_state *state)
+{
+    char strbuf[STRBUF];
+    int r;
+
+    if( state->length > 0 ) {
+	state->state = NS_ERROR;
+	state->error = "Too early acknowledgement";
+	return;
+    }
+
+    snprintf(strbuf, STRBUF, "DONE %s", state->filename);
+    r = sendstr(state->socket, strbuf);
+    if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
+
+    state->state = NS_RECEIVING;
+    state->filename[0] = 0;
+}
+
+void netspool_end(s_netspool_state *state)
+{
+    sendstr(state->socket, "END satisfied");
+    close(state->socket);
+    state->state = NS_NOTINIT;
+}
+
 /*
 void savefile(const char *fn, unsigned long long l, int s)
 {
     char BUF[STRBUF];
     int n, n1;
     int f;
-    f=open(fn, O_CREAT|O_EXCL|O_WRONLY, 0666);
+    f=open(fn, O_CREAT|O_EXCL|O_WRONLY, 0664);
     if(f==-1) {
 	    puts("error open file");
 	    printf("%d %s\n", errno, strerror(errno));
 	    exit(-3);
     }
     while(l) {
-	n=recv(s, BUF, l>STRBUF?STRBUF:l, 0);
-        if(n==0){
-	    puts("remote socket shutdown");
-	    exit(-3);
-        }
-        if(n==-1){
-	    puts("error reading data");
-	    printf("%d %s\n", errno, strerror(errno));
-	    exit(-3);
-        }
 	n1 = write(f, BUF, n);
 	if(n1!=n) {
 	    puts("error writing file");
 	    printf("%d %s\n", errno, strerror(errno));
 	    exit(-3);
 	}
-	l-=n;
     }
     close(f);
-}
-
-
-void main() {
-    char filename[STRBUF];
-    unsigned long long length;
-
-
-    
-    filename[0]=0;
-    while(1) {
-	    savefile(filename, length, s);
-	    sprintf(strbuf, "DONE %s", filename);
-	    sendstr(s, strbuf);
-	    filename[0]=0;
-	    continue;
-	}
-	
-	puts("!!!");
-	exit(-1);
-    }
-    
-    sendstr(s, "END satisfied");
-    close(s);
-
 }
 */
