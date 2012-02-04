@@ -8,11 +8,10 @@
 #include <sys/types.h>
 #include <netdb.h>
 
+#include "includes.h"
 #include "netspool.h"
 
-const char *RHOST = "172.31.251.3";
-const char *RPORT = "24555";
-
+#ifdef NETSPOOL
 
 int readstr(int s, char *buf, int len) {
     char c=0;
@@ -99,7 +98,7 @@ void netspool_start(s_netspool_state *state, const char *host, const char *port,
 
     if( r ) {
 	state->state = NS_ERROR;
-	state->error = gai_error(r);
+	state->error = gai_strerror(r);
 	return;
     }
 
@@ -118,7 +117,7 @@ void netspool_start(s_netspool_state *state, const char *host, const char *port,
 
     if(r==-1) {
 	state->state = NS_ERROR;
-	state->error = "could not connect\n"
+	state->error = "could not connect";
 	return;
     }
 
@@ -139,7 +138,10 @@ void netspool_start(s_netspool_state *state, const char *host, const char *port,
 
 void netspool_query(s_netspool_state *state, const char *what)
 {
-    int r = sendstr(state->socket, "GET ALL");
+    char strbuf[STRBUF];
+    int r;
+    snprintf(strbuf, STRBUF, "GET %s", what); /* ALL or comma separated NETMAIL, ECHOMAIL... */
+    r = sendstr(state->socket, strbuf);
     if( r ) {
 	state->state = NS_ERROR;
 	state->error = "IO error";
@@ -153,7 +155,7 @@ void netspool_receive(s_netspool_state *state)
     char strbuf[STRBUF];
     int r;
 
-    r = readstr(s, strbuf, STRBUF);
+    r = readstr(state->socket, strbuf, STRBUF);
     if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
     puts(strbuf);
     if(strcmp(strbuf, "QUEUE EMPTY")==0) {
@@ -162,15 +164,15 @@ void netspool_receive(s_netspool_state *state)
     }
 
     if(strncmp(strbuf, "FILENAME ", 9)==0) {
-        strcpy(filename, strbuf+9);
-        puts(filename);
+        strcpy(state->filename, strbuf+9);
+        puts(state->filename);
     } else {
 	state->state = NS_ERROR;
-	state->error = "expected filename or queue empty"
+	state->error = "expected filename or queue empty";
 	return;
     }
 
-    r = readstr(s, strbuf, STRBUF);
+    r = readstr(state->socket, strbuf, STRBUF);
     if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
     if(strncmp(strbuf, "BINARY ", 7)==0) {
 	    /*if(filename[0]==0) {
@@ -182,7 +184,7 @@ void netspool_receive(s_netspool_state *state)
 	state->state = NS_RECVFILE;
     } else {
 	state->state = NS_ERROR;
-	state->error = "expected binary"
+	state->error = "expected binary";
 	return;
     }
 
@@ -265,3 +267,4 @@ void savefile(const char *fn, unsigned long long l, int s)
     close(f);
 }
 */
+#endif

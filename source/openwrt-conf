@@ -11,4 +11,4 @@ CC=$PREFIX-gcc
 
 export PATH CC CPP
 
-#./configure --prefix=/opt/bforce --host=mips-openwrt-linux --disable-syslog
+#./configure --prefix=/opt/bforce --host=mips-openwrt-linux --disable-syslog --enable-netspool

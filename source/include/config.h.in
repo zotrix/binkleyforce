@@ -62,6 +62,9 @@
 /* Do you want to use syslog? */
 #undef USE_SYSLOG
 
+/* Netspool */
+#undef NETSPOOL
+
 /* Do you want use .csy locks? */
 #undef BFORCE_USE_CSY
 
