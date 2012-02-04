@@ -110,6 +110,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	    char *host = conf_string(cf_netspool_host);
 	    char *port = conf_string(cf_netspool_port);
 	    if(host==NULL) {
+		log("netspool is not configured");
 	        state.netspool.state = NS_UNCONF;
 	    } else {
 		snprintf(address, 299, state.node.addr.point? "%d:%d/%d.%d": "%d.%d.%d",
@@ -120,6 +121,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 		} else {
 		    password[0] = 0;
 		}
+		log("netspool start %s %s %s %s", host, port, address, password);
 		netspool_start(&state.netspool, host, port, address, password);
 	    }
 	}
@@ -140,7 +142,11 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	    return 0;
 	}
 	
-	log("netspool gives no more files");
+	if(state.netspool.state==NS_ERROR) {
+	    log("netspool error %s", state.netspool.error);
+	} else {
+	    log("netspool gives no more files");
+	}
 
 #endif
 

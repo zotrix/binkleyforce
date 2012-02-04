@@ -163,19 +163,24 @@ s_conf_entry bforce_config[BFORCE_NUMBER_OF_KEYWORDS+1] = {
 	CONF_KEY(zmodem_mincps_send,         CT_CONNLIST),
 	CONF_KEY(zmodem_send_dummy_pkt,      CT_BOOLEAN),
 	CONF_KEY(zmodem_skip_by_pos,         CT_BOOLEAN),
-	CONF_KEY(zmodem_start_block_size,    CT_NUMBER),
-	CONF_KEY(zmodem_tx_window,           CT_NUMBER),
-	CONF_KEY(nomail_flag,                CT_STRING),
-	CONF_KEY(bind_ip,                    CT_STRING),
-	CONF_KEY(recieved_to_lower,          CT_BOOLEAN),
+	CONF_KEY(zmodem_start_block_size,	CT_NUMBER),
+	CONF_KEY(zmodem_tx_window,		CT_NUMBER),
+	CONF_KEY(nomail_flag,			CT_STRING),
+	CONF_KEY(bind_ip,			CT_STRING),
+	CONF_KEY(recieved_to_lower,		CT_BOOLEAN),
 #ifdef USE_SYSLOG
-	CONF_KEY(syslog_facility,            CT_NUMBER),
+	CONF_KEY(syslog_facility,		CT_NUMBER),
 #endif
 #ifdef DEBUG
-	CONF_KEY(debug_file,                 CT_STRING),
-	CONF_KEY(debug_level,                CT_DEBLEVEL),
+	CONF_KEY(debug_file,			CT_STRING),
+	CONF_KEY(debug_level,			CT_DEBLEVEL),
 #endif
-	CONF_KEY(split_inbound,                CT_BOOLEAN),
+	CONF_KEY(split_inbound,			CT_BOOLEAN),
+#ifdef NETSPOOL
+        CONF_KEY(netspool_host,			CT_STRING),
+        CONF_KEY(netspool_port,			CT_STRING),
+#endif
+
 	CONF_END()
 };
 
