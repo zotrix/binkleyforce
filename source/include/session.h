@@ -22,6 +22,10 @@
 #include "outbound.h"
 #include "prot_common.h"
 
+#ifdef NETSPOOL
+#include "netspool.h"
+#endif
+
 typedef enum session {
 	SESSION_UNKNOWN,
 	SESSION_FTSC,
@@ -155,6 +159,9 @@ const	s_modemport *modemport;
 	
 	s_falist *mailfor;         /* Remote valid addresses */
 	s_fsqueue queue;           /* Send files queue */
+#ifdef NETSPOOL
+	s_netspool_state netspool;
+#endif
 };
 typedef struct state s_state;
 
@@ -194,7 +201,7 @@ int   session_check_addr(s_faddr addr);
 int   session_get_password(s_faddr addr, char *buffer, size_t buflen);
 int   session_remote_lookup(s_sysaddr *addrs, int anum);
 void  session_remote_log_status(void);
-int   session_check_password(s_faddr addr, const char *passwd);
+/*int   session_check_password(s_faddr addr, const char *passwd); seems not used*/
 int   session_set_inbound(void);
 void  session_set_freqs_status(void);
 void  session_set_send_options(void);

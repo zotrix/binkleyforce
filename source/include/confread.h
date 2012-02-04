@@ -271,7 +271,10 @@ typedef enum {
 	cf_debug_level,
 #endif
 	cf_split_inbound,
-        cf_netspool,
+#ifdef NETSPOOL
+        cf_netspool_host,
+        cf_netspool_port,
+#endif
 	BFORCE_NUMBER_OF_KEYWORDS
 } bforce_config_keyword;
 

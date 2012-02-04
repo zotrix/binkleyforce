@@ -40,13 +40,15 @@ const char *Protocols[] =
  * Return value:
  * 	Zero value on success and non-zero if nothing to send
  */
-static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_fsqueue *q)
+static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 {
 	s_filelist *ptrl = NULL;
 	s_filelist *best = NULL;
+	s_fsqueue *q = &state.queue;
 
 	*dest = NULL;
-	
+
+	/* local queue */
 	for( ptrl = q->fslist; ptrl; ptrl = ptrl->next )
 		if( ptrl->status == STATUS_WILLSEND )
 		{
@@ -97,6 +99,44 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_fsqueue *q)
 			return 0;
 		}
 	
+	/* network queue */
+#ifdef NETSPOOL
+
+	if(state.netspool.state == NS_NOTINIT) {
+	    char password[9];
+	    char address[300];
+	    char *host = conf_string(cf_netspool_host);
+	    char *port = conf_string(cf_netspool_port);
+	    if(host==NULL) {
+	        state.netspool.state = NS_UNCONF;
+	    } else {
+		snprintf(address, 299, state.node.addr.point? "%d:%d/%d.%d": "%d.%d.%d",
+                        state.node.addr.zone, state.node.addr.net,
+                        state.node.addr.node, state.node.addr.point);
+		if(state.protected) {
+		    session_get_password(state.node.addr, password, 8);
+		} else {
+		    password[0] = 0;
+		}
+		netspool_start(&state.netspool, host, port, address, password);
+	    }
+	}
+
+	if(state.netspool_state == NS_READY) {
+	    netspool_query(&state.netspool, "ALL");
+	}
+
+	if(state.netspool_state == NS_RECEIVING) {
+	    netspool_receive(&state.netspool);
+	}
+
+	if(state.netspool_state == NS_RECVFILE) {
+	    *dest = NULL;
+	    return 0;
+	}
+
+#endif
+
 	return 1;
 }
 
@@ -159,7 +199,7 @@ int p_tx_fopen(s_protinfo *pi)
 		return 1;
 
 get_next_file:
-	if( prot_get_next_file(&ptrl, pi, &state.queue) || !ptrl )
+	if( prot_get_next_file(&ptrl, pi) || !ptrl )
 		return 1;
 	
 	/* Mark this file as "processed" */
