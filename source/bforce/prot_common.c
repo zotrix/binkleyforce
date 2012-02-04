@@ -105,7 +105,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	log("start netspool");
 	if(state.netspool.state == NS_NOTINIT) {
 	    log("netspool connection");
-	    char password[9];
+	    char password[100];
 	    char address[300];
 	    char *host = conf_string(cf_netspool_host);
 	    char *port = conf_string(cf_netspool_port);
@@ -117,7 +117,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
                         state.node.addr.zone, state.node.addr.net,
                         state.node.addr.node, state.node.addr.point);
 		if(state.protected) {
-		    session_get_password(state.node.addr, password, 8);
+		    session_get_password(state.node.addr, password, 100);
 		} else {
 		    password[0] = 0;
 		}
