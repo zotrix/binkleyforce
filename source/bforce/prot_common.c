@@ -113,7 +113,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 		log("netspool is not configured");
 	        state.netspool.state = NS_UNCONF;
 	    } else {
-		snprintf(address, 299, state.node.addr.point? "%d:%d/%d.%d": "%d.%d.%d",
+		snprintf(address, 299, state.node.addr.point? "%d:%d/%d.%d": "%d:%d/%d",
                         state.node.addr.zone, state.node.addr.net,
                         state.node.addr.node, state.node.addr.point);
 		if(state.protected) {
