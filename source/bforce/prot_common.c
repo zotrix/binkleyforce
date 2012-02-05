@@ -102,9 +102,9 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	/* network queue */
 #ifdef NETSPOOL
 
-	log("netspool next file");
+	/*log("netspool next file");*/
 	if(state.netspool.state == NS_NOTINIT) {
-	    log("new netspool connection");
+	    /*log("new netspool connection");*/
 	    char password[100];
 	    char address[300];
 	    char *host = conf_string(cf_netspool_host);
@@ -121,18 +121,18 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 		} else {
 		    password[0] = 0;
 		}
-		log("netspool start %s %s %s %s", host, port, address, password);
+		log("netspool start %s %s %s (pwd)", host, port, address);
 		netspool_start(&state.netspool, host, port, address, password);
 	    }
 	}
 
 	if(state.netspool.state == NS_READY) {
-	    log("netspool request");
+	    /*log("netspool request");*/
 	    netspool_query(&state.netspool, "ALL");
 	}
 
 	if(state.netspool.state == NS_RECEIVING) {
-	    log("netspool begin receive");
+	    /*log("netspool begin receive");*/
 	    netspool_receive(&state.netspool);
 	} else {
 	    log("netspool could not start receive");
@@ -140,13 +140,13 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	}
 
 	if(state.netspool.state == NS_RECVFILE) {
-	    log("netspool start file");
+	    /*log("netspool start file");*/
 	    *dest = NULL;
 	    return 0;
 	}
 
 	if(state.netspool.state == NS_READY) {
-	    log("no files to receive");
+	    log("netspool queue empty");
 	    netspool_end(&state.netspool);
 	}
 
@@ -486,7 +486,7 @@ int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
 
 #ifdef NETSPOOL
 	if(pi->send->fname==NULL && strcmp(pi->send->local_name, "NETSPOOL")==0 ) {
-	    log("reading netspool file");
+	    /*log("reading netspool file");*/
 	    if( state.netspool.state != NS_RECVFILE ) {
 		log("send: wrong netspool state");
 		pi->send->status = FSTAT_SKIPPED;
@@ -499,10 +499,10 @@ int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
 		pi->send->status = FSTAT_SKIPPED;
 		return -2;
 	    }
-	    log("got %d bytes from netspool", n);
+	    /*log("got %d bytes from netspool", n);*/
 	    return n;
 	} else {
-	    log("reading local file");
+	    /*log("reading local file");*/
 	}
 #endif
 	/*
