@@ -134,6 +134,9 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	if(state.netspool.state == NS_RECEIVING) {
 	    log("netspool begin receive");
 	    netspool_receive(&state.netspool);
+	} else {
+	    log("netspool is busy");
+	    return 1;
 	}
 
 	if(state.netspool.state == NS_RECVFILE) {
