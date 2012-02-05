@@ -102,9 +102,9 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	/* network queue */
 #ifdef NETSPOOL
 
-	log("start netspool");
+	log("netspool next file");
 	if(state.netspool.state == NS_NOTINIT) {
-	    log("netspool connection");
+	    log("new netspool connection");
 	    char password[100];
 	    char address[300];
 	    char *host = conf_string(cf_netspool_host);
@@ -135,7 +135,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	    log("netspool begin receive");
 	    netspool_receive(&state.netspool);
 	} else {
-	    log("netspool is busy");
+	    log("netspool could not start receive");
 	    return 1;
 	}
 
@@ -144,11 +144,14 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	    *dest = NULL;
 	    return 0;
 	}
-	
+
+	if(state.netspool.state == NS_READY) {
+	    log("no files to receive");
+	    netspool_end(&state.netspool);
+	}
+
 	if(state.netspool.state==NS_ERROR) {
-	    log("netspool error %s", state.netspool.error);
-	} else {
-	    log("netspool gives no more files");
+	    log("no next file: netspool error %s", state.netspool.error);
 	}
 
 #endif
@@ -452,6 +455,7 @@ int p_tx_fclose(s_protinfo *pi)
 			break;
 #ifdef NETSPOOL
 		case ACTION_ACKNOWLEDGE:
+			log("netspool commit %s", state.netspool.filename);
 			netspool_acknowledge(&state.netspool);
 			break;
 #endif
@@ -482,6 +486,7 @@ int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
 
 #ifdef NETSPOOL
 	if(pi->send->fname==NULL && strcmp(pi->send->local_name, "NETSPOOL")==0 ) {
+	    log("reading netspool file");
 	    if( state.netspool.state != NS_RECVFILE ) {
 		log("send: wrong netspool state");
 		pi->send->status = FSTAT_SKIPPED;
@@ -490,12 +495,14 @@ int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
 	    n = netspool_read(&state.netspool, buffer, buflen);
 	    pi->send->eofseen = state.netspool.length == 0;
 	    if( n==-1 ) {
-		log("send: netspool error");
-		log(state.netspool.error);
+		log("send: netspool error %s", state.netspool.error);
 		pi->send->status = FSTAT_SKIPPED;
 		return -2;
 	    }
+	    log("got %d bytes from netspool", n);
 	    return n;
+	} else {
+	    log("reading local file");
 	}
 #endif
 	/*
@@ -1295,9 +1302,9 @@ void p_session_cleanup(s_protinfo *pi, bool success)
 	
 #ifdef NETSPOOL
 	if(state.netspool.state==NS_ERROR) {
-	    log("netspool error %s", state.netspool.error);
+	    log("end session: netspool error %s", state.netspool.error);
 	}
-	netspool_end(&state.netspool);
+	/*netspool_end(&state.netspool);*/
 #endif
 }
 

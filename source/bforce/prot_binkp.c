@@ -363,7 +363,9 @@ int binkp_incoming(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data)
 					override_get (&ovr, remote_data->addrs[i].addr, 0);
 					if (!nodelist_checkflag (ovr.sFlags, "NR"))
 					{
+#ifndef NETSPOOL
 						szOpt = xstrcat (szOpt, " NR");
+#endif
 						break;
 					}
 				}
@@ -439,6 +441,7 @@ int binkp_transfer(s_protinfo *pi) {
 	if (remote->options & BINKP_OPT_NR) {
 	  binkp_queuemsgf(&bpi,BPMSG_FILE,"%s %ld %ld -1",name,total,time);
 	  binkp_send_state = BPT_Wait_M_GET;
+	  log("binkp going to BPT_Wait_M_GET");
 	} else {
 	  binkp_queuemsgf(&bpi,BPMSG_FILE,"%s %ld %ld 0", name,total,time);
 	  binkp_send_state = BPT_Send_File;
@@ -446,6 +449,7 @@ int binkp_transfer(s_protinfo *pi) {
       }
     }
     if (binkp_send_state == BPT_Send_File) {
+      log("binkp BPT_Send_File");
       if (bpi.opos == 0 && bpi.n_msgs == 0) {
 	if((n = p_tx_readfile (bpi.obuf+BINKP_BLK_HDRSIZE,4096,pi))<0) {
 	  p_tx_fclose (pi);

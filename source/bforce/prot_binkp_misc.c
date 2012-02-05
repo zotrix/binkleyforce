@@ -538,8 +538,10 @@ void binkp_queue_sysinfo(s_bpinfo *bpi, s_binkp_sysinfo *binkp)
 	if (state.caller)
 	{
 		char *szOpt = xstrcpy (" MB");
+#ifndef NETSPOOL
 		if (!nodelist_checkflag (state.node.flags, "NR"))
 			szOpt = xstrcat (szOpt, " NR");
+#endif
 		if (!nodelist_checkflag (state.node.flags, "ND"))
 			szOpt = xstrcat (szOpt, " ND");
 		if (*szOpt)
@@ -732,9 +734,12 @@ void binkp_parse_options(s_binkp_sysinfo *binkp, char *options)
 	for( p = string_token(options, &n, NULL, 0); p;
 	     p = string_token(NULL, &n, NULL, 0) )
 	{
-		if( !strcmp(p, "NR") )
+#ifndef NETSPOOL
+		if( !strcmp(p, "NR") ) {
 			binkp->options |= BINKP_OPT_NR;
-		else if( !strcmp(p, "MB") )
+		} else
+#endif
+		if( !strcmp(p, "MB") )
 			binkp->options |= BINKP_OPT_MB;
 		else if( !strcmp(p, "MPWD") )
 			binkp->options |= BINKP_OPT_MPWD;
