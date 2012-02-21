@@ -40,8 +40,10 @@ const char *Protocols[] =
  * Return value:
  * 	Zero value on success and non-zero if nothing to send
  */
-static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
+
+static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_filehint *hint)
 {
+        log("prot_get_next_file %d", hint);
 	s_filelist *ptrl = NULL;
 	s_filelist *best = NULL;
 	s_fsqueue *q = &state.queue;
@@ -49,7 +51,9 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	*dest = NULL;
 
 	/* local queue */
-	for( ptrl = q->fslist; ptrl; ptrl = ptrl->next )
+	for( ptrl = q->fslist; ptrl; ptrl = ptrl->next ) {
+	        //log("scan %s", ptrl->fname);
+	        if (hint) if (strcmp(hint->fn, ptrl->fname) !=0 || hint->sz != ptrl->size) continue;
 		if( ptrl->status == STATUS_WILLSEND )
 		{
 			if( pi->reqs_only )
@@ -85,6 +89,8 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 			else
 				best = ptrl;
 		}
+	}
+	//log("scan1 done");
 	
 	if( best )
 	{
@@ -92,15 +98,20 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 		return 0;
 	}
 	
-	for( ptrl = pi->filelist; ptrl; ptrl = ptrl->next )
+	for( ptrl = pi->filelist; ptrl; ptrl = ptrl->next ) {
+	        if (hint) if (strcmp(hint->fn, ptrl->fname) !=0 || hint->sz != ptrl->size) continue;
 		if( ptrl->status == STATUS_WILLSEND )
 		{
 			*dest = ptrl;
 			return 0;
 		}
+	}
+	//log("scan2 done");
 	
 	/* network queue */
 #ifdef NETSPOOL
+
+        if (hint) return 1; // cannot choose
 
 	/*log("netspool next file");*/
 	if(state.netspool.state == NS_NOTINIT) {
@@ -132,7 +143,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	}
 
 	if(state.netspool.state == NS_RECEIVING) {
-	    /*log("netspool begin receive");*/
+	    log("netspool begin receive");
 	    netspool_receive(&state.netspool);
 	} else {
 	    log("netspool could not start receive");
@@ -208,7 +219,7 @@ void prot_update_traffic(s_protinfo *pi, const s_fsqueue *q)
  * Return value:
  * 	Zero value on success and non-zero if have nothing to send
  */
-int p_tx_fopen(s_protinfo *pi)
+int p_tx_fopen(s_protinfo *pi, s_filehint *hint)
 {
 	FILE *fp;
 	struct stat st;
@@ -218,11 +229,14 @@ int p_tx_fopen(s_protinfo *pi)
 		return 1;
 
 get_next_file:
-	if( prot_get_next_file(&ptrl, pi) )
-		return 1;
-
+	if( prot_get_next_file(&ptrl, pi, hint) ) {
+	    log("no next file");
+	    return 1;
+        }
+        
 	if( ptrl ) {
 	
+	    log("sending local file");
 	    /* Mark this file as "processed" */
 	    ptrl->status = STATUS_SENDING;
 
@@ -261,12 +275,14 @@ get_next_file:
 	 */
 	if( pi->sentfiles && pi->n_sentfiles > 0 )
 	{
+	        log("adding file to sentfile");
 		pi->sentfiles = (s_finfo *)xrealloc(pi->sentfiles, sizeof(s_finfo)*(pi->n_sentfiles+1));
 		memset(&pi->sentfiles[pi->n_sentfiles], '\0', sizeof(s_finfo));
 		pi->send = &pi->sentfiles[pi->n_sentfiles++];
 	}
 	else
 	{
+	        log("adding file to new sentfile");
 		pi->sentfiles = (s_finfo *)xmalloc(sizeof(s_finfo));
 		memset(pi->sentfiles, '\0', sizeof(s_finfo));
 		pi->send = pi->sentfiles;
@@ -292,6 +308,8 @@ get_next_file:
 	pi->send->status      = FSTAT_PROCESS;
 	pi->send->action      = ACTION_ACKNOWLEDGE;
 	pi->send->flodsc      = -1;
+	pi->send->waitack     = true;
+	pi->send->netspool    = true;
 	} else {
 
 #endif
@@ -310,7 +328,8 @@ get_next_file:
 	pi->send->type        = ptrl->type;
 	pi->send->action      = ptrl->action;
 	pi->send->flodsc      = ptrl->flodsc;
-
+	pi->send->waitack     = false;
+	pi->send->netspool    = false;
 #ifdef NETSPOOL
 	}
 #endif
@@ -330,6 +349,15 @@ get_next_file:
 	}
 
 	return 0;
+}
+
+int p_tx_rewind(s_protinfo *pi, size_t pos)
+{
+    if( !pi || !pi->send || !pi->send->fp) {
+        log("cannot rewind");
+        return -1;
+    }
+    return fseek(pi->send->fp, pos, SEEK_SET);
 }
 
 void prot_traffic_update(s_traffic *traf, size_t size, int xtime, int type)
@@ -386,6 +414,11 @@ int p_tx_fclose(s_protinfo *pi)
 {
 	long trans_time = 0;
 	long cps = 0;
+	
+	if (!pi->send) {
+	    log("already closed");
+	    return -1;
+	}
 	
 	if( pi->send->fp )
 	{
@@ -462,6 +495,8 @@ int p_tx_fclose(s_protinfo *pi)
 		}
 	}
 	
+	pi->send = NULL;
+	
 	return 0;
 }
 
@@ -478,14 +513,14 @@ int p_tx_fclose(s_protinfo *pi)
  * 	  -1 - error reading file (must try to send file later)
  * 	  -2 - file must be skipped (send never)
  */
-int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
+long int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
 {
 	int n;
 	struct stat st;
 	long ftell_pos;
 
 #ifdef NETSPOOL
-	if(pi->send->fname==NULL && strcmp(pi->send->local_name, "NETSPOOL")==0 ) {
+	if (pi->send->netspool) {
 	    /*log("reading netspool file");*/
 	    if( state.netspool.state != NS_RECVFILE ) {
 		log("send: wrong netspool state");
@@ -575,7 +610,7 @@ int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
  * 	-1 - error writing file (receive later)
  * 	-2 - file must be skipped (receive never)
  */
-int p_rx_writefile(const char *buffer, size_t buflen, s_protinfo *pi)
+long int p_rx_writefile(const char *buffer, size_t buflen, s_protinfo *pi)
 {
 	struct stat st;
 	long ftell_pos = ftell(pi->recv->fp);
@@ -918,7 +953,7 @@ int p_rx_fopen(s_protinfo *pi, char *fn, size_t sz, time_t tm, mode_t mode)
 				 * directory, do you know who could left it here ? :)
 				 */
 				
-				log("recv: allready have \"%s\"", pi->recv->fname);
+				log("recv: already have \"%s\"", pi->recv->fname);
 				
 				if( p_move2inbound(pi) == 0 )
 					pi->recv->status = FSTAT_SKIPPED;

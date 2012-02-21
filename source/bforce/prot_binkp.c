@@ -21,23 +21,1064 @@
 #include "prot_common.h"
 #include "prot_binkp.h"
 
-typedef enum {
-	BPI_SendSysInfo,
-	BPI_WaitADR,
-	BPI_WaitPWD,
-	BPI_Auth
-} binkp_incoming_state;
+#define BINKP_HEADER (2)
+#define BINKP_MAXBLOCK (32768)
+
+#define BINKP_BLK_CMD (1)
+#define BINKP_BLK_DATA (2)
 
 typedef enum {
-	BPO_SendSysInfo,
-	BPO_WaitNUL,
-	BPO_SendPWD,
-	BPO_WaitADR,
-	BPO_Auth,
-	BPO_WaitOK
-} binkp_outgoing_state;
+    frs_nothing,
+    frs_data,
+    frs_didget,
+    frs_skipping
+} e_file_receive_status;
 
-#define GOTO(label,newrc)    { rc = (newrc); goto label; }
+typedef struct {
+    e_binkp_mode mode;
+    int phase;
+    int subphase;
+    s_binkp_sysinfo *local_data;
+    s_binkp_sysinfo *remote_data;
+    s_protinfo *pi;
+    bool address_established; // indicates that remote address is verified and disallows further change
+    char extracmd[BINKP_MAXBLOCK+1];
+    bool extraislast;
+    bool password_received;
+    bool NR;
+    bool MB;
+    bool complete;
+    int batchsendcomplete;
+    int batchreceivecomplete;
+    bool waiting_got;
+    int batch_send_count;
+    int batch_recv_count;
+    e_file_receive_status frs;
+    int emptyloop;
+} s_binkp_state;
+
+int binkp_getforsend(s_binkp_state *bstate, char *buf, int *block_type, unsigned short *block_length);
+int binkp_doreceiveblock(s_binkp_state *bstate, char *buf, int block_type, unsigned short block_length);
+void binkp_process_NUL(s_binkp_sysinfo *remote_data, char *buffer);
+void binkp_process_ADR(s_binkp_sysinfo *remote_data, char *buffer);
+
+int binkp_loop(s_binkp_state *bstate) {
+    unsigned char readbuf[BINKP_HEADER+BINKP_MAXBLOCK+1];
+    unsigned char writebuf[BINKP_HEADER+BINKP_MAXBLOCK+1];
+
+    int rc = HRC_OK;
+
+    bstate->phase = 0;
+    bstate->subphase = 0;
+    bstate->extracmd[0] = -1;
+    bstate->extraislast = false;
+    bstate->password_received = false;
+    bstate->NR = false;
+    if(bstate->remote_data->options & BINKP_OPT_NR) {
+        bstate->NR = true;
+    }
+    bstate->MB = false;
+    if(bstate->remote_data->options & BINKP_OPT_MB) {
+        bstate->MB = true;
+    }
+    bstate->complete = false; // end in this mode (handshake or session)
+    bstate->batchsendcomplete = 0;
+    bstate->batchreceivecomplete = 0;
+    bstate->waiting_got = false;
+    bstate->batch_send_count = 0;
+    bstate->batch_recv_count = 0;
+    bstate->frs = frs_nothing;
+    bstate->emptyloop = 0;
+
+    unsigned short read_pos=0;
+    unsigned short read_blklen=0;
+    unsigned short want_read=BINKP_HEADER;
+
+    unsigned short write_pos=0;
+    unsigned short have_to_write=0;
+
+    int n, m;
+    bool no_more_to_send = false;
+    bool no_more_read = false;
+    bool canread, canwrite;
+
+    int timeout = conf_number(cf_binkp_timeout);
+    if( timeout==0 )
+        timeout = 60;
+
+    /* used for higher level calls */
+    int block_type;
+    unsigned short block_length;
+
+    //     session criterium           handshake criterium
+    while (!bstate->complete || bstate->waiting_got) {
+        log("loop s: %d r: %d", bstate->batchsendcomplete, bstate->batchreceivecomplete);
+        if(have_to_write==0 && (!no_more_to_send || bstate->extracmd[0]!=-1)) {
+            m = binkp_getforsend(bstate, writebuf+BINKP_HEADER, &block_type, &block_length);
+            if( m==1) {
+                //log("got block for sending %d %hu", block_type, block_length);
+                write_pos = 0;
+                have_to_write = block_length+BINKP_HEADER;
+                if( block_type == BINKP_BLK_CMD ) {
+                    writebuf[0] = (block_length>>8)|0x80;
+                }
+                else if( block_type == BINKP_BLK_DATA ) {
+                    writebuf[0] = (block_length>>8)&0x7f;
+                } else {
+                    log("block for sending has invalid type, aborting");
+                    return -1;
+                }
+                writebuf[1] = block_length&0xff;
+            } else if (m==2) {
+                log("no more to send");
+                no_more_to_send = true;
+            }
+            else if (m==0) {
+                log("binkp: nothing to write");
+            } else {
+                log("getforsend error");
+                return -1;
+            }
+        }
+
+        if (bstate->batchsendcomplete && bstate->batchreceivecomplete) {
+            log("batch is complete");
+            if (bstate->MB && (bstate->batch_send_count || bstate->batch_recv_count)) {
+                log("starting one more batch");
+                bstate->batchsendcomplete -= 1;
+                bstate->batchreceivecomplete -= 1;
+                //bstate->firstbatch = false;
+                bstate->batch_send_count = 0;
+                bstate->batch_recv_count = 0;
+                no_more_to_send = false;
+                bstate->phase = 0;
+                bstate->frs = frs_nothing;
+                want_read = BINKP_HEADER;
+                continue;
+            }
+            else {
+                if (bstate->waiting_got) {
+                    log("waiting for all files have being confirmed");
+                }
+                else {
+                    log("finishing session");
+                    bstate->complete = true;
+                    want_read = 0;
+                }
+            }
+        }
+
+        log("select read: %d write %d", want_read, have_to_write);
+        if (want_read || have_to_write) {
+          n = tty_select(want_read?&canread:NULL, have_to_write?&canwrite:NULL, timeout);
+          if( n<0 ) {
+              log("binkp error on tty_select");
+              return -1;
+          }
+        }
+        else {
+            log("empty loop %d", ++bstate->emptyloop);
+            if (bstate->emptyloop==10) {
+                return -1;
+            }
+        }
+
+        if(want_read && canread) {
+            n = tty_read(readbuf+read_pos, want_read);
+            if( n<0 ) {
+                log("binkp: tty read error");
+                return -1;
+            } 
+            else if (n==0) {
+                log("read: remote socket shutdown");
+                return -1;
+            }
+            want_read -= n;
+            read_pos += n;
+            if (read_pos == BINKP_HEADER) {
+                // have read header, want read body
+                log("it should be 0: %d", want_read);
+                want_read = ((unsigned short)(readbuf[0]&0x7F)<<8) | readbuf[1];
+                log("pending block, length %u", want_read);
+            } // no else here: if want_read may be zero here for zero length block
+        }
+
+        // no_more_read only signs that read thread do not keep connection anymore but messages should be processed
+        if (want_read==0 && read_pos) { // check every loop, not only just after read as accepting may be deferred
+                block_type = readbuf[0]&0x80? BINKP_BLK_CMD: BINKP_BLK_DATA;
+                block_length = read_pos - BINKP_HEADER;
+                log("binkp: complete block is received %d %hu", block_type, block_length);
+                m = binkp_doreceiveblock(bstate, readbuf+BINKP_HEADER, block_type, block_length);
+                if(m==1) {
+                    log("block is successfully accepted");
+                    read_pos = 0;
+                    want_read = BINKP_HEADER;
+                } else if (m==2) {
+                    log("block accepted and no more is needed in this mode");
+                    no_more_read = true;
+                    read_pos = 0;
+                    want_read = 0; //BINKP_HEADER;
+                }
+                else if (m==0) {
+                    log("binkp: keeping buffer");
+                }
+                else if (m==3) {
+                    log("aborting session");
+                    bstate->complete = true;
+                    rc = HRC_OTHER_ERR;
+                }
+                else {
+                    log("doreceiveblock error");
+                    return -1;
+                }
+        }
+
+        if (have_to_write && canwrite) {
+            log("writing %d pos %d", have_to_write, write_pos);
+            n = tty_write(writebuf+write_pos, have_to_write);
+            if( n<0 ) {
+                log("binkp: tty write error");
+                return -1;
+            } 
+            else if (n==0) {
+                log("write: remote socket shutdown");
+                return -1;
+            }
+            //log("%d bytes sent", n);
+            write_pos += n;
+            have_to_write -= n;
+        }
+    }
+    return rc;
+}
+
+int binkp_outgoing(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data)
+{
+    s_binkp_state s;
+    s.mode = bmode_outgoing_handshake;
+    s.local_data = local_data;
+    s.remote_data = remote_data;
+    s.pi = NULL;
+    s.address_established = false;
+    return binkp_loop(&s);
+}
+
+int binkp_incoming(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data)
+{
+    s_binkp_state s;
+    s.mode = bmode_incoming_handshake;
+    s.local_data = local_data;
+    s.remote_data = remote_data;
+    s.pi = NULL;
+    s.address_established = false;
+    return binkp_loop(&s);
+}
+
+int binkp_transfer(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data, s_protinfo *pi)
+{
+    log("start transfer");
+    s_binkp_state s;
+    s.mode = bmode_transfer;
+    s.local_data = local_data;
+    s.remote_data = remote_data;
+    s.pi = pi;
+    return binkp_loop(&s);
+}
+
+
+// hanshake
+// send
+//  all nuls
+//  address
+//  wait password
+//  send OK/ERR
+//  -- end handshake
+//  M_FILE
+//  (wait M_GET)
+//  data
+//  wait M_GOT
+//  next file
+//  send EOB
+
+// recv
+//  accept NULs
+//  accept address
+//  accept password
+//  -- end handshake
+//  accept M_GET or
+//  accept M_FILE
+//  accept data
+//  accept next file or EOB
+
+
+int binkp_getforsend(s_binkp_state *bstate, char *buf, int *block_type, unsigned short *block_length)
+{
+    int my_sf, wr_pos;
+    int n; // read file
+    if (bstate->extracmd[0]!=-1) {
+        log("extra command from receiver %d %s", bstate->extracmd[0], bstate->extracmd+1);
+        buf[0] = bstate->extracmd[0];
+        strcpy(buf+1, bstate->extracmd+1);
+        *block_type = BINKP_BLK_CMD;
+        *block_length = strlen(buf+1)+1;
+        bstate->extracmd[0] = -1;
+        if (bstate->extraislast) {
+            bstate->phase = 100;
+            log("extracmd is last");
+            bstate->complete = true;
+        }
+        return 1;
+    }
+    if (bstate->mode==bmode_incoming_handshake || bstate->mode==bmode_outgoing_handshake ) {
+	switch( bstate->phase ) {
+case 0: // MD5 challenge
+        bstate->phase+=1;
+        bstate->subphase=0;
+	if( bstate->mode==bmode_incoming_handshake && bstate->local_data->challenge_length > 0 )
+	{
+                log("send challenge");
+		char challenge[128];
+		string_bin_to_hex(challenge, bstate->local_data->challenge, bstate->local_data->challenge_length);
+		buf[0] = BPMSG_NUL;
+		sprintf(buf+1, "OPT CRAM-MD5-%s", challenge);
+		log("sent %s", buf+1);
+		*block_type = BINKP_BLK_CMD;
+		*block_length = strlen(buf+1)+1;
+		return 1;
+	}	
+
+case 1: // send sysinfo
+        my_sf = bstate->subphase;
+        bstate->subphase+=1;
+        *block_type = BINKP_BLK_CMD;
+        switch( my_sf ) {
+case 0:
+            buf[0]=BPMSG_NUL;
+	    *block_length = 1 + sprintf(buf+1, "SYS %s", bstate->local_data->systname);
+	    return 1;
+case 1:
+	    buf[0]=BPMSG_NUL;
+	    *block_length = 1 + sprintf(buf+1, "ZYZ %s", bstate->local_data->sysop);
+	    return 1;
+case 2:
+	    buf[0]=BPMSG_NUL;
+	    *block_length = 1 + sprintf(buf+1, "LOC %s", bstate->local_data->location);
+	    return 1;
+case 3:
+	    buf[0]=BPMSG_NUL;
+	    *block_length = 1 + sprintf(buf+1, "PHN %s", bstate->local_data->phone);
+	    return 1;
+case 4:
+	    buf[0]=BPMSG_NUL;
+	    *block_length = 1 + sprintf(buf+1, "NDL %s", bstate->local_data->flags);
+	    return 1;
+case 5:
+	    buf[0]=BPMSG_NUL;
+	    *block_length = 1 + sprintf(buf+1, "TIME %s", bstate->local_data->timestr);
+	    return 1;
+case 6:
+            buf[0]=BPMSG_NUL;
+	    *block_length = 1 + sprintf(buf+1, "VER %s %s/%d.%d",
+		bstate->local_data->progname, bstate->local_data->protname,
+		bstate->local_data->majorver, bstate->local_data->minorver);
+	    return 1;
+case 7:
+	    if (bstate->mode==bmode_outgoing_handshake) {
+	        buf[0]=BPMSG_NUL;
+		strcpy(buf+1, "OPT MB");
+		if (!nodelist_checkflag (state.node.flags, "NR"))
+			strcat(buf+1, " NR");
+		// ND is too complicated and have unclear gain
+		// seems not to remove files from inbound until successful session end is enough to eliminate dupes
+		// if (!nodelist_checkflag (state.node.flags, "ND"))
+		//	strcat(buf+1, " ND");
+		*block_length = 1 + strlen(buf+1);
+		return 1;
+	    }
+	    // else skip subphase
+	    my_sf += 1;
+	    bstate->subphase += 1;
+//case 8:
+	}
+	// here if subphase==8
+	bstate->phase += 1;
+	bstate->subphase = 0;
+	// p
+
+case 2:
+        log("send address");
+        bstate->phase += 1;
+        buf[0] = BPMSG_ADR;
+        wr_pos = 1;
+        int i;
+	for( i = 0; i < bstate->local_data->anum; i++ )
+	{
+		if (i) wr_pos += sprintf(buf+wr_pos, " ");
+		if (bstate->local_data->addrs[i].addr.point) {
+                    wr_pos += sprintf(buf+wr_pos, "%d:%d/%d.%d@%s",
+	                 bstate->local_data->addrs[i].addr.zone, bstate->local_data->addrs[i].addr.net,
+	                 bstate->local_data->addrs[i].addr.node, bstate->local_data->addrs[i].addr.point,
+	                 bstate->local_data->addrs[i].addr.domain);
+	        }
+	        else {
+                    wr_pos += sprintf(buf+wr_pos, "%d:%d/%d@%s",
+	                 bstate->local_data->addrs[i].addr.zone, bstate->local_data->addrs[i].addr.net,
+	                 bstate->local_data->addrs[i].addr.node,
+	                 bstate->local_data->addrs[i].addr.domain);
+	        }
+	}
+	*block_type = BINKP_BLK_CMD;
+	*block_length = wr_pos;
+	log("address: %s", buf+1);
+	return 1;
+
+case 3: // send password on outgoing or pw confirmation on incoming
+        // special empty password is sent if there is no password for the remote addr
+        if (bstate->mode==bmode_incoming_handshake) {
+            if (bstate->password_received) {
+                log("password verified");
+                buf[0] = BPMSG_OK;
+                *block_type = BINKP_BLK_CMD;
+                *block_length = 1;
+                bstate->phase += 1;
+                return 1;
+            }
+            log("waiting for password from remote");
+            return 0; // nothing to send
+        }
+        else if (bstate->mode==bmode_outgoing_handshake) {
+            if (!bstate->address_established) {
+                log("address not received still");
+                return 0;
+            }
+            log("sending password");
+
+            buf[0] = BPMSG_PWD;
+            *block_type = BINKP_BLK_CMD;
+
+            if( bstate->local_data->passwd == '\0' ) {
+                *block_length = 1 + sprintf(buf+1, "-");
+	    }
+            else if( bstate->remote_data->options & BINKP_OPT_MD5 ) {
+		char digest_bin[16];
+		char digest_hex[33];
+		
+		if(bstate->remote_data->challenge_length==0) {
+		    log("waiting for challenge");
+		    return 0;
+		}
+		md5_cram_get(bstate->local_data->passwd, bstate->remote_data->challenge,
+			     bstate->remote_data->challenge_length, digest_bin);
+		
+		/* Encode digest to the hex string */
+		string_bin_to_hex(digest_hex, digest_bin, 16);
+		
+		*block_length = 1 + sprintf(buf+1, "CRAM-MD5-%s", digest_hex);
+	    }
+	    else {
+                *block_length = 1 + sprintf(buf+1, "%s", bstate->local_data->passwd);
+            }
+            bstate->phase += 1;
+            return 1;
+        }
+        else {
+            log("impossible mode");
+            return -1;
+        }
+
+
+case 4:
+        if (bstate->mode==bmode_incoming_handshake) {
+            log("incoming handshake is complete");
+            bstate->complete = true;
+        }
+        else {
+            log("outgoing handshake: everything is sent");
+        }
+        return 2;
+        }
+
+    }
+    else if (bstate->mode == bmode_transfer) {
+
+        switch (bstate->phase) {
+            send_next_file:
+            case 0:
+                log("fetch file from queue");
+                if (p_tx_fopen(bstate->pi, NULL)) {
+                    log("queue empty");
+                    bstate->phase = 4;
+                    goto send_EOB;
+                }
+                bstate->waiting_got = true;
+                bstate->batch_send_count += 1;
+
+                //send M_FILE -1
+                if (bstate->NR) {
+                    log("send M_FILE with -1");
+                    buf[0] = BPMSG_FILE;
+                    *block_length = 1+sprintf(buf+1, "%s %ld %ld -1", bstate->pi->send->net_name, 
+                            bstate->pi->send->bytes_total, bstate->pi->send->mod_time);
+                    *block_type = BINKP_BLK_CMD;
+                    return 1; // no state change. phase would be changed to 1 by recv when M_GET is received
+                }
+                bstate->phase += 1;
+
+            case 1: //send M_FILE - M_GET forcibly sets this phase. M_GET must open needed file
+                log("send M_FILE");
+                buf[0] = BPMSG_FILE;
+                *block_length = 1+sprintf(buf+1, "%s %ld %ld 0", bstate->pi->send->net_name, 
+                        bstate->pi->send->bytes_total, bstate->pi->send->mod_time);
+                *block_type = BINKP_BLK_CMD;
+                bstate->phase += 1;
+                return 1;
+
+            case 2: //send file data
+                n = p_tx_readfile (buf, 4096, bstate->pi); // BINKP_MAXBLOCK
+                if (n>0) {
+                    *block_type = BINKP_BLK_DATA;
+                    *block_length = n;
+                    bstate->pi->send->bytes_sent += n;
+                    return 1;
+                }
+                else if (n<0) {
+                    log("p_tx_readfile error");
+                    return -1;
+                }
+                log("file is sent");
+                bstate->pi->send->status = FSTAT_WAITACK;
+                
+                bstate->phase += 1;
+                
+            case 3: //wait for acknowlede
+            
+                if (bstate->pi->send->waitack) {
+                    log("file must be acknowledged with M_GOT");
+                    int i;
+                    bool ack = false;
+                    for(i = 0; i < bstate->pi->n_sentfiles; i++ ) {
+                        if (p_compfinfo(&bstate->pi->sentfiles[i], bstate->pi->send->fname, bstate->pi->send->bytes_total, bstate->pi->send->mod_time) == 0) {
+                            if (bstate->pi->sentfiles[i].status == FSTAT_SUCCESS) {
+                                ack = true;
+                                log("acknowledged");
+                                break;
+                            }
+                        }
+                    }
+                    if (!ack) {
+                        log("wait for ACK");
+                        return 0;
+                    }
+                } else {
+                    log("do not wait M_GOT");
+                }
+                bstate->phase = 0;
+                goto send_next_file;
+
+            send_EOB:
+            case 4:
+                log("send EOB n_sentfile=%d", bstate->pi->n_sentfiles);
+                buf[0] = BPMSG_EOB;
+                *block_type = BINKP_BLK_CMD;
+                *block_length = 1;
+                bstate->batchsendcomplete += 1;
+                bstate->phase += 1;
+                return 1;
+
+            case 5:
+                log("nothing to send");
+                return 2;
+
+
+
+
+        }
+
+    } else {
+        log("invalid mode");
+        return -1;
+    }
+    log("unrecognized state, shutting down");
+    bstate->complete = true;
+    return 2;
+
+}
+
+
+int binkp_doreceiveblock(s_binkp_state *bstate, char *buf, int block_type, unsigned short block_length)
+{
+    switch (block_type) {
+case BINKP_BLK_CMD:
+        if (block_length<1) {
+            log("zero length command received");
+            return -1;
+        }
+        buf[block_length] = 0; // fencing for easy processing
+        switch (buf[0]) {
+case BPMSG_NUL:          /* Site information, just logging */
+            log("M_NUL");
+            binkp_process_NUL(bstate->remote_data, buf+1);
+            return 1;
+case BPMSG_ADR:              /* List of addresses */
+            log("M_ADR");
+            if (bstate->address_established) {
+                log("remote tries to change address");
+                return -1;
+            }
+            if( bstate->extracmd[0] !=-1 ) return 0; // suspend !!!
+            binkp_process_ADR(bstate->remote_data, buf+1);
+
+	    if( !bstate->remote_data->anum ) {
+	        log("error: remote did not supplied any addresses");
+	        if( bstate->extracmd[0] !=-1 ) return 0; // suspend
+	        bstate->extracmd[0] = BPMSG_BSY;
+	        strcpy(bstate->extracmd+1, "No addresses was presented");
+		bstate->extraislast = true;
+        	return 1;
+            }
+
+            if (bstate->mode == bmode_incoming_handshake) {
+		int i;
+		log("sending options");
+		bstate->extracmd[0] = BPMSG_NUL;
+		bstate->extraislast = false;
+		sprintf(bstate->extracmd+1,"OPT MB");
+		s_override ovr;
+		for(i = 0; i < bstate->remote_data->anum; i++) {
+		    ovr.sFlags = "";
+		    override_get (&ovr, bstate->remote_data->addrs[i].addr, 0);
+		    if (nodelist_checkflag (ovr.sFlags, "NR")==0) {
+			strcat (bstate->extracmd+1, " NR");
+			break;
+		    }
+	        }
+            }
+            // further use extracmd only for errors
+
+	    if (bstate->mode == bmode_outgoing_handshake) {
+	        // check that remote has the address we call
+		if( session_addrs_check_genuine(bstate->remote_data->addrs, bstate->remote_data->anum,
+			                             state.node.addr) ) {
+                    log("error: remote does not have the called address");
+	            bstate->extracmd[0] = BPMSG_ERR;
+	            strcpy(bstate->extracmd+1, "Sorry, you are not who I need");
+	            bstate->extraislast = true;
+	            return 1;
+                }
+                // check that all addresses of remote has the same password
+		strncpy(bstate->remote_data->passwd, bstate->local_data->passwd, BINKP_MAXPASSWD);
+		bstate->remote_data->passwd[BINKP_MAXPASSWD] = '\0';
+
+		if( session_addrs_check(bstate->remote_data->addrs, bstate->remote_data->anum,
+			                             bstate->remote_data->passwd, NULL, 0) ) {
+	            log("error: Security violation");
+	            bstate->extracmd[0] = BPMSG_ERR;
+	            strcpy(bstate->extracmd+1, "Security violation");
+	            bstate->extraislast = true;
+        	    return 1;
+		}
+            }
+
+            bstate->address_established = true;
+            return 1;
+case BPMSG_PWD:              /* Session password */
+            log("M_PWD received");
+            if (bstate->mode != bmode_incoming_handshake) {
+                log("unexpected M_PWD");
+                return -1;
+            }
+            if (!bstate->address_established) {
+                log("M_PWD before M_ADR");
+                return -1;
+            }
+
+	    strnxcpy(bstate->remote_data->passwd, buf+1, block_length);
+	    memcpy(bstate->remote_data->challenge, bstate->local_data->challenge, BINKP_MAXCHALLENGE+1);
+	    bstate->remote_data->challenge_length = bstate->local_data->challenge_length;
+
+            /* Do authorization */
+	    if( binkp_auth_incoming(bstate->remote_data) ) {
+	        log("error: invalid password");
+	        if( bstate->extracmd[0] !=-1 ) return 0; // suspend if extra is occupied
+	        bstate->extracmd[0] = BPMSG_ERR;
+	        strcpy(bstate->extracmd+1, "Security violation");
+	        bstate->extraislast = true;
+	        return 1;
+	    }
+	    // lock addresses
+	    if( session_addrs_lock(bstate->remote_data->addrs, bstate->remote_data->anum) ) {
+	        log("error locking addresses of the remote");
+	        if( bstate->extracmd[0] !=-1 ) return 0; // suspend if extra is occupied
+	        bstate->extracmd[0] = BPMSG_BSY;
+	        strcpy(bstate->extracmd+1, "All addresses are busy");
+	        bstate->extraislast = true;
+	        return 1;
+	    }
+	    else {
+	        log("flag password received");
+		bstate->password_received = true;
+		return 2;
+	    }
+            break;
+
+case BPMSG_FILE:             /* File information */
+            log("M_FILE");
+            if (bstate->mode != bmode_transfer) {
+                log("unexpected M_FILE");
+                return -1;
+            }
+            s_bpfinfo recvfi;
+            if( binkp_parsfinfo(buf+1, &recvfi, true) ) {
+		log ("M_FILE parse error: %s", buf + 1);
+		return -1;
+            }
+            bstate->batch_recv_count += 1;
+            if (bstate->frs == frs_data) {
+                log("overlapping M_FILE received");
+                return -1;
+            }
+
+	    if (bstate->frs == frs_didget) {
+                log("is it what we want?");
+                if( bstate->pi->recv && p_compfinfo(bstate->pi->recv, recvfi.fn, recvfi.sz, recvfi.tm) == 0
+			 && bstate->pi->recv->bytes_skipped == recvfi.offs && bstate->pi->recv->fp ) {
+                    log("resuming %s from offset %d", recvfi.fn, recvfi.offs);
+	            bstate->frs = frs_data;
+		    return 1;
+	        }
+	        log("no, skipping (TODO: accept it)");
+		if( bstate->extracmd[0] != -1 ) return 0;
+		bstate->extracmd[0] = BPMSG_SKIP;
+		sprintf(bstate->extracmd+1, "%s %ld %ld %ld", recvfi.fn, recvfi.sz, recvfi.tm);
+		bstate->extraislast = false;
+		return 1;
+	    }
+
+	    if (bstate->frs!=frs_nothing && bstate->frs!=frs_skipping) {
+	        log("strange receiving mode %d", bstate->frs);
+	        return -1;
+	    }
+
+            if( bstate->extracmd[0] != -1 ) return 0;
+	    switch(p_rx_fopen(bstate->pi, recvfi.fn, recvfi.sz, recvfi.tm, 0)) {
+case 0:
+		if (bstate->pi->recv->bytes_skipped == recvfi.offs) {
+		        log("accepting file %s from offset %d", recvfi.fn, recvfi.offs);
+			bstate->frs = frs_data;
+			return 1;
+		}
+		log("making M_GET to skip downloaded part");
+		bstate->extracmd[0] = BPMSG_GET;
+		sprintf(bstate->extracmd+1, "%s %ld %ld %ld",
+					bstate->pi->recv->net_name, (long)bstate->pi->recv->bytes_total,
+					(long)bstate->pi->recv->mod_time,
+					(long)bstate->pi->recv->bytes_skipped);
+		bstate->extraislast = false;
+		bstate->frs = frs_didget;
+		return 1;
+case 1:
+		log("SKIP (non-destructive)");
+		bstate->extracmd[0] = BPMSG_SKIP;
+		sprintf(bstate->extracmd+1, "%s %ld %ld", bstate->pi->recv->net_name, (long)bstate->pi->recv->bytes_total,
+					(long)bstate->pi->recv->mod_time);
+		bstate->extraislast = false;
+	        bstate->frs = frs_skipping;
+		return 1;
+case 2:
+		log("SKIP (destructive)");
+		bstate->extracmd[0] =  BPMSG_GOT;
+		sprintf(bstate->extracmd+1, "%s %ld %ld",
+					bstate->pi->recv->net_name, (long)bstate->pi->recv->bytes_total,
+					(long)bstate->pi->recv->mod_time);
+		bstate->extraislast = false;
+		bstate->frs = frs_skipping;
+		return 1;
+default:
+		log("p_rx_fopen_error");
+		return -1;
+            }
+            log("never get here");
+            return -1;
+            
+case BPMSG_OK:               /* Password was acknowleged (data ignored) */
+            log("M_OK received");
+            if (bstate->mode != bmode_outgoing_handshake) {
+                log("unexpected M_OK");
+                return -1;
+            }
+            if (session_addrs_lock(bstate->remote_data->addrs, bstate->remote_data->anum)) {
+                log("error: unable to lock");
+                if (bstate->extracmd[0]!=-1) return 0;
+                bstate->extracmd[0] = BPMSG_BSY;
+                strcpy(bstate->extracmd+1, "All addresses are busy");
+		bstate->extraislast = true;
+		return 2;
+	    }
+	    log("outoing handshake successfully complete");
+	    bstate->complete = true;
+            return 2;
+
+case BPMSG_EOB:              /* End Of Batch (data ignored) */
+            log("M_EOB received");
+            if (bstate->mode != bmode_transfer) {
+                log("unexpected M_EOB");
+                return -1;
+            }
+            bstate->batchreceivecomplete += 1;
+            return 1; // continue receiving as M_GOT may and would arrive
+
+case BPMSG_GOT:              /* File received */
+case BPMSG_SKIP:
+            log("received GOT/SKIP");
+            if (bstate->mode != bmode_transfer) {
+                log("unexpected M_GOT/M_SKIP");
+                return -1;
+            }
+            s_bpfinfo fi;
+            int i;
+	    if (binkp_parsfinfo (buf+1, &fi, false)) {
+	        log("error parsing");
+	        return -1;
+	    }
+
+	    if (strcmp (bstate->pi->send->net_name, fi.fn) == 0 && bstate->pi->send->status != FSTAT_WAITACK) {
+	        log("aborting current file");
+	        if (bstate->pi->send->netspool) {
+	            log("cannot abort netspool in progress");
+	            return -1;
+	        }
+	        p_tx_fclose(bstate->pi);
+	        bstate->phase = 0;
+	    }
+	
+	    for(i = 0; i < bstate->pi->n_sentfiles; i++ ) {
+	        if (p_compfinfo (&bstate->pi->sentfiles[i], fi.fn, fi.sz, fi.tm) == 0) {
+	            s_finfo *tmp = bstate->pi->send;
+	            bstate->pi->send = &bstate->pi->sentfiles[i];
+	            if (buf[0] == BPMSG_SKIP) {
+	                if (bstate->pi->send->netspool) {
+	                    log("cannot skip netspool");
+	                    return -1;
+	                }
+	                log("skipped %s", fi.fn);
+	                bstate->pi->send->status = FSTAT_REFUSED;
+	            } else {
+	                if (bstate->pi->send->status == FSTAT_WAITACK) {
+	                    log("confirmed %s", fi.fn);
+	                    bstate->pi->send->status = FSTAT_SUCCESS;
+	                } else {
+	                    log("confirmed not sent file - skipped %s", fi.fn);
+	                    if (bstate->pi->send->netspool) {
+	                        log("cannot skip netspool");
+	                        return -1;
+	                    }
+		            bstate->pi->send->status = FSTAT_SKIPPED;
+	                }
+	            }
+	            log("closing file");
+	            p_tx_fclose(bstate->pi);
+	            bstate->pi->send = tmp;
+	            goto check_that_all_files_are_confirmed;
+	        }
+	    }
+            log("unmatched file name");
+            return -1;
+
+check_that_all_files_are_confirmed:
+            {
+                int i;
+                for (i = 0; i < bstate->pi->n_sentfiles; i++) {
+                    if (bstate->pi->sentfiles[i].status == FSTAT_WAITACK) {
+                        log("sent file %d waits for acknowlede", i);
+                        return 1;
+                    }
+                }
+            }
+            log("all files are confirmed");
+            bstate->waiting_got = false;
+            return 1;
+
+
+case BPMSG_ERR:              /* Misc errors */
+            log("remote error: %s", buf+1);
+            return 3;
+case BPMSG_BSY:              /* All AKAs are busy */
+            log("remote busy: %s", buf+1);
+            return 3;
+
+case BPMSG_GET:              /* Get a file from offset */
+            log("received M_GET: cancel transmitting current file and send requested file if it is in outbound");
+            if (bstate->mode != bmode_transfer) {
+                log("unexpected M_GET");
+                return -1;
+            }
+            s_bpfinfo getfi;
+            if (binkp_parsfinfo(buf+1, &getfi, true) != 0) {
+                log("error parsing M_GET %s", buf+1);
+                return -1;
+            }
+            log("M_GET file %s size %d time %d offset %d", getfi.fn, getfi.sz, getfi.tm, getfi.offs);
+
+            if (bstate->extracmd[0] != -1) return 0;
+
+            if (p_compfinfo(bstate->pi->send, getfi.fn, getfi.sz, getfi.tm)==0) {
+                log("M_GET for currently transmitted file");
+                if (getfi.offs==bstate->pi->send->bytes_sent) {
+                    log("M_GET offset match current (seems NR mode)");
+                    // go to sending M_FILE
+                    bstate->phase = 2;
+                    bstate->extracmd[0] = BPMSG_FILE;
+                    sprintf(bstate->extracmd+1, "%s %ld %ld %ld",
+							bstate->pi->send->net_name, (long)bstate->pi->send->bytes_total,
+							(long)bstate->pi->send->mod_time, (long)bstate->pi->send->bytes_sent);
+		    bstate->extraislast = false;
+		    return 1;
+		
+                }
+            }
+
+            if (bstate->pi->send->netspool) {
+                log("ignore differing M_GET for netspool");
+                return 1;
+            }
+
+            if (bstate->pi->send && p_compfinfo(bstate->pi->send, getfi.fn, getfi.sz, getfi.tm)==0) {
+                if( p_tx_rewind(bstate->pi, getfi.offs) != 0 ) {
+                    log("failed to rewind");
+                    p_tx_fclose(bstate->pi);
+                    return -1;
+                }
+		log("sending \"%s\" from %ld offset", bstate->pi->send->fname, (long)getfi.offs);
+		bstate->pi->send->bytes_skipped = getfi.offs;
+		bstate->pi->send->bytes_sent = getfi.offs;
+		bstate->extracmd[0] = BPMSG_FILE;
+		sprintf(bstate->extracmd+1, "%s %ld %ld %ld", bstate->pi->send->net_name, (long)bstate->pi->send->bytes_total,
+							(long)bstate->pi->send->mod_time, (long)getfi.offs);
+		bstate->extraislast = false;
+		bstate->phase = 2;
+		return 1;
+	    }
+
+            if( bstate->pi->send ) {
+                log("aborting current file");
+                p_tx_fclose(bstate->pi);
+            }
+
+            s_filehint hint;
+            hint.fn = getfi.fn;
+            hint.sz = getfi.sz;
+            hint.tm = getfi.tm;;
+            if( p_tx_fopen(bstate->pi, &hint) != 0 ) {
+                log("could not satisfy M_GET");
+                return -1;
+            }
+            if( p_tx_rewind(bstate->pi, getfi.offs) != 0 ) {
+                log("failed to rewind");
+                p_tx_fclose(bstate->pi);
+                return -1;
+            }
+            bstate->waiting_got = true;
+	    log("sending \"%s\" from %ld offset", bstate->pi->send->fname, (long)getfi.offs);
+	    bstate->pi->send->bytes_skipped = getfi.offs;
+	    bstate->pi->send->bytes_sent = getfi.offs;
+	    bstate->extracmd[0] = BPMSG_FILE;
+	    sprintf(bstate->extracmd+1, "%s %ld %ld %ld", bstate->pi->send->net_name, (long)bstate->pi->send->bytes_total,
+	                                        (long)bstate->pi->send->mod_time, (long)getfi.offs);
+	    bstate->extraislast = false;
+	    bstate->phase = 2;
+	    return 1;
+        }
+        log("unknown command %d received", buf[0]);
+        return -1;
+
+case BINKP_BLK_DATA:
+        //if there is file in progress
+        log("data block received length=%d", block_length);
+        if (block_length==0) {
+            log("ignore zero length data block, argus workaround");
+            return 1;
+        }
+        if (bstate->frs == frs_nothing) {
+            log("unexpected data block");
+            return -1;
+        }
+        if (bstate->frs == frs_didget || bstate->frs == frs_skipping) {
+            log("did M_GET or M_GOT or M_SKIP, skipping data");
+            return 1;
+        }
+
+        if (bstate->extracmd[0] != -1) return 0;
+
+        long int n;
+        n = p_rx_writefile(buf, block_length, bstate->pi);
+
+	if( n < 0 ) {
+	    log("error writing file");
+	    if( n == -2 ) {
+		bstate->extracmd[0] = BPMSG_GOT;
+		sprintf(bstate->extracmd+1, "%s %ld %ld", bstate->pi->recv->net_name, (long)bstate->pi->recv->bytes_total,
+							(long)bstate->pi->recv->mod_time);
+		bstate->extraislast = false;
+	    }
+	    else {
+	        bstate->extracmd[0] = BPMSG_SKIP;
+		sprintf(bstate->extracmd+1, "%s %ld %ld", bstate->pi->recv->net_name, (long)bstate->pi->recv->bytes_total,
+							(long)bstate->pi->recv->mod_time);
+		bstate->extraislast = false;
+	    }
+	    bstate->frs = frs_skipping;
+	    p_rx_fclose(bstate->pi);
+	    return 1;
+	}
+	else {
+	    bstate->pi->recv->bytes_received += block_length;
+
+            /* Was it the last data block? */
+	    if( bstate->pi->recv->bytes_received > bstate->pi->recv->bytes_total ) {
+		log("binkp got too many data (%ld, %ld expected)",
+			(long)bstate->pi->recv->bytes_received, (long)bstate->pi->recv->bytes_total);
+
+		bstate->frs = frs_skipping;
+		bstate->pi->recv->status = FSTAT_REFUSED;
+		p_rx_fclose(bstate->pi);
+		return -1;
+	    }
+	    else if( bstate->pi->recv->bytes_received == bstate->pi->recv->bytes_total ) {
+		log("receive completed");
+		bstate->frs = frs_nothing;
+		bstate->pi->recv->status = FSTAT_SUCCESS;
+		if( !p_rx_fclose(bstate->pi) ) {
+			bstate->extracmd[0] = BPMSG_GOT;
+			sprintf(bstate->extracmd+1, "%s %ld %ld",
+					bstate->pi->recv->net_name, (long)bstate->pi->recv->bytes_total,
+					(long)bstate->pi->recv->mod_time);
+			bstate->extraislast = false;
+			return 1;
+		}
+		else {
+		    log("some error committing file");
+		    bstate->extracmd[0] = BPMSG_SKIP;
+		    sprintf(bstate->extracmd+1, "%s %ld %ld",
+								bstate->pi->recv->net_name, (long)bstate->pi->recv->bytes_total,
+								(long)bstate->pi->recv->mod_time);
+		    bstate->extraislast = false;
+		    return 1;
+		}
+	    } else {
+	        log("data block accepted");
+	        return 1;
+	    }
+	}
+        log("never should be here");
+        return -1;
+default:
+        log("impossible block_type");
+        return -1;
+    }
+}
+
+
+// ---- inherent code ----
 
 void binkp_process_NUL(s_binkp_sysinfo *remote_data, char *buffer)
 {
@@ -91,7 +1132,7 @@ void binkp_process_NUL(s_binkp_sysinfo *remote_data, char *buffer)
 			strnxcpy(remote_data->progname, buffer+4, sizeof(remote_data->progname));
 	}
 	else
-		log("BinkP got invalid NUL: \"%s\"", string_printable(buffer));
+		log("BinkP NUL: \"%s\"", string_printable(buffer)); // NUL cannot be invalid as it is optional info
 }
 
 void binkp_process_ADR(s_binkp_sysinfo *remote_data, char *buffer)
@@ -99,8 +1140,7 @@ void binkp_process_ADR(s_binkp_sysinfo *remote_data, char *buffer)
 	s_faddr addr;
 	char *p, *q;
 	
-	for( p = string_token(buffer, &q, NULL, 0); p;
-	     p = string_token(NULL, &q, NULL, 0) )
+	for( p = string_token(buffer, &q, NULL, 0); p; p = string_token(NULL, &q, NULL, 0) )
 	{
 		if( ftn_addrparse(&addr, p, FALSE) )
 			log("BinkP got unparsable address \"%s\"", string_printable(p));
@@ -109,154 +1149,16 @@ void binkp_process_ADR(s_binkp_sysinfo *remote_data, char *buffer)
 	}
 }
 
-int binkp_outgoing(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data)
-{
-	s_bpinfo bpi;
-	binkp_outgoing_state binkp_state = BPO_SendSysInfo;
-	int rc = HRC_OK;
-	int recv_rc = 0;
-	int send_rc = 0;
-	bool send_ready = FALSE;
-	bool recv_ready = FALSE;
-	
-	binkp_init_bpinfo(&bpi);
-	
-	while(1)
-	{
-		switch(binkp_state) {
-		case BPO_SendSysInfo:
-			binkp_queue_sysinfo(&bpi, local_data);
-			binkp_state = BPO_WaitNUL;
-			break;
-
-		case BPO_SendPWD:
-			if( *local_data->passwd == '\0' )
-			{
-				binkp_queuemsg(&bpi, BPMSG_PWD, NULL, "-");
-			}
-			else if( remote_data->options & BINKP_OPT_MD5 )
-			{
-				char digest_bin[16];
-				char digest_hex[33];
-				
-				md5_cram_get(local_data->passwd, remote_data->challenge,
-						remote_data->challenge_length, digest_bin);
-			
-				/* Encode digest to the hex string */
-				string_bin_to_hex(digest_hex, digest_bin, 16);
-				
-				binkp_queuemsg(&bpi, BPMSG_PWD, "CRAM-MD5-", digest_hex);
-			}
-			else
-				binkp_queuemsg(&bpi, BPMSG_PWD, NULL, local_data->passwd);
-
-			binkp_state = BPO_WaitADR;
-			break;
-			
-		case BPO_Auth:
-			/* Set remote password same as local */
-			strncpy(remote_data->passwd, local_data->passwd, BINKP_MAXPASSWD);
-			remote_data->passwd[BINKP_MAXPASSWD] = '\0';
-
-			if( !remote_data->anum )
-			{
-				binkp_queuemsg(&bpi, BPMSG_BSY, NULL, "No addresses was presented");
-				GOTO(Exit, HRC_BUSY);
-			}
-			else if( session_addrs_check_genuine(remote_data->addrs, remote_data->anum,
-			                             state.node.addr) )
-			{
-				binkp_queuemsg(&bpi, BPMSG_ERR, NULL, "Sorry, you are not who I need");
-				GOTO(Exit, HRC_NO_ADDRESS);
-			}
-			else if( session_addrs_check(remote_data->addrs, remote_data->anum,
-			                             remote_data->passwd, NULL, 0) )
-			{
-				binkp_queuemsg(&bpi, BPMSG_ERR, NULL, "Security violation");
-				GOTO(Exit, HRC_BAD_PASSWD);
-			}
-			else if( session_addrs_lock(remote_data->addrs, remote_data->anum) )
-			{
-				binkp_queuemsg(&bpi, BPMSG_BSY, NULL, "All addresses are busy");
-				GOTO(Exit, HRC_BUSY);
-			}
-			binkp_state = BPO_WaitOK;
-			break;
-
-		default:
-			break;
-		}
-		
-		/*
-		 * Receive/Send next data block
-		 */
-		send_ready = recv_ready = FALSE;
-		
-		if( tty_select(&recv_ready, (bpi.opos || bpi.n_msgs) ?
-		               &send_ready : NULL, bpi.timeout) < 0 )
-			GOTO(Abort, HRC_OTHER_ERR);
-		
-		recv_rc = BPMSG_NONE;
-		send_rc = 0;
-		
-		if( recv_ready && (recv_rc = binkp_recv(&bpi)) == BPMSG_EXIT )
-			GOTO(Abort, HRC_OTHER_ERR);
-		
-		if( send_ready && (send_rc = binkp_send(&bpi)) < 0 )
-			GOTO(Abort, HRC_OTHER_ERR);
-
-		/*
-		 * Handle received message
-		 */
-		switch(recv_rc) {
-		case BPMSG_NONE:
-			break;
-
-		case BPMSG_NUL:
-			binkp_process_NUL(remote_data, bpi.ibuf+1);
-			if( binkp_state == BPO_WaitNUL )
-				binkp_state = BPO_SendPWD;
-			break;
-		
-		case BPMSG_ADR:
-			if( binkp_state == BPO_WaitADR )
-			{
-				binkp_process_ADR(remote_data, bpi.ibuf+1);
-				binkp_state = BPO_Auth;
-			}
-			break;
-		
-		case BPMSG_OK:
-			if( binkp_state == BPO_WaitOK )
-				GOTO(Exit, HRC_OK);
-			break;
-		
-		case BPMSG_ERR:
-			log("BinkP error: \"%s\"", string_printable(bpi.ibuf+1));
-			GOTO(Abort, HRC_FATAL_ERR);
-			
-		case BPMSG_BSY:
-			log("BinkP busy: \"%s\"", string_printable(bpi.ibuf+1));
-			GOTO(Abort, HRC_TEMP_ERR);
-		}
-	}
-
-Exit:
-	if( binkp_flush_queue(&bpi, bpi.timeout) && rc == HRC_OK )
-		rc = HRC_OTHER_ERR;
-
-Abort:
-	binkp_deinit_bpinfo(&bpi);
-	
-	return rc;
-}
-
-
 int binkp_auth_incoming(s_binkp_sysinfo *remote_data)
 {
 	if( remote_data->challenge_length > 0
 	 && strncmp(remote_data->passwd, "CRAM-MD5-", 9) == 0 )
 	{
+	        log("md5 auth addrs %s", remote_data->addrs);
+	        log("md5 auth anum %d", remote_data->anum);
+	        log("md5 auth passwd %s", remote_data->passwd + 9);
+	        log("md5 auth challenge %s", remote_data->challenge);
+	        log("md5 auth challenge len %d", remote_data->challenge_length);
 		return session_addrs_check(remote_data->addrs,
 		                           remote_data->anum,
 		                           remote_data->passwd + 9,
@@ -264,461 +1166,7 @@ int binkp_auth_incoming(s_binkp_sysinfo *remote_data)
 		                           remote_data->challenge_length);
 	}
 	
+	log("plain-text auth");
 	return session_addrs_check(remote_data->addrs, remote_data->anum,
 	                           remote_data->passwd, NULL, 0);
 }
-
-int binkp_incoming(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data)
-{
-	s_bpinfo bpi;
-	binkp_incoming_state binkp_state = BPI_SendSysInfo;
-	int rc = HRC_OK;
-	int recv_rc = 0;
-	int send_rc = 0;
-	bool send_ready = FALSE;
-	bool recv_ready = FALSE;
-	
-	binkp_init_bpinfo(&bpi);
-	
-	while(1)
-	{
-		switch(binkp_state) {
-		case BPI_SendSysInfo:
-			binkp_queue_sysinfo(&bpi, local_data);
-			binkp_state = BPI_WaitADR;
-			break;
-		
-		case BPI_Auth:
-			/* Set challenge string same as local */
-			memcpy(remote_data->challenge, local_data->challenge,
-					sizeof(remote_data->challenge));
-			remote_data->challenge_length = local_data->challenge_length;
-			
-			/* Do authorization */
-			if( !remote_data->anum )
-			{
-				binkp_queuemsg(&bpi, BPMSG_BSY, NULL, "No addresses was presented");
-				GOTO(Exit, HRC_BUSY);
-			}
-			else if( binkp_auth_incoming(remote_data) )
-			{
-				binkp_queuemsg(&bpi, BPMSG_ERR, NULL, "Security violation");
-				GOTO(Exit, HRC_BAD_PASSWD);
-			}
-			else if( session_addrs_lock(remote_data->addrs, remote_data->anum) )
-			{
-				binkp_queuemsg(&bpi, BPMSG_BSY, NULL, "All addresses are busy");
-				GOTO(Exit, HRC_BUSY);
-			}
-			else
-			{
-				binkp_queuemsg(&bpi, BPMSG_OK, NULL, NULL);
-				GOTO(Exit, HRC_OK);
-			}
-			break;
-
-		default:
-			break;
-		}
-		
-		/*
-		 * Receive/Send next data block
-		 */
-		send_ready = recv_ready = FALSE;
-		
-		if( tty_select(&recv_ready, (bpi.opos || bpi.n_msgs) ?
-		               &send_ready : NULL, bpi.timeout) < 0 )
-			GOTO(Abort, HRC_OTHER_ERR);
-		
-		recv_rc = BPMSG_NONE;
-		send_rc = 0;
-		
-		if( recv_ready && (recv_rc = binkp_recv(&bpi)) == BPMSG_EXIT )
-			GOTO(Abort, HRC_OTHER_ERR);
-		
-		if( send_ready && (send_rc = binkp_send(&bpi)) < 0 )
-			GOTO(Abort, HRC_OTHER_ERR);
-
-		/*
-		 * Handle received message
-		 */
-		switch(recv_rc) {
-		case BPMSG_NONE:
-			break;
-
-		case BPMSG_NUL:
-			binkp_process_NUL(remote_data, bpi.ibuf+1);
-			break;
-		
-		case BPMSG_ADR:
-			if( binkp_state == BPI_WaitADR )
-			{
-				int i;
-				char *szOpt = xstrcpy (" MB");
-				s_override ovr;
-				binkp_process_ADR(remote_data, bpi.ibuf+1);
-				for(i = 0; i < remote_data->anum; i++)
-				{
-					ovr.sFlags = "";
-					override_get (&ovr, remote_data->addrs[i].addr, 0);
-					if (!nodelist_checkflag (ovr.sFlags, "NR"))
-					{
-#ifndef NETSPOOL
-						szOpt = xstrcat (szOpt, " NR");
-#endif
-						break;
-					}
-				}
-				binkp_queuemsg(&bpi,BPMSG_NUL,"OPT",szOpt);
-				free (szOpt);
-				binkp_state = BPI_WaitPWD;
-			}
-			break;
-		
-		case BPMSG_PWD:
-			if( binkp_state == BPI_WaitPWD )
-			{
-				strnxcpy(remote_data->passwd, bpi.ibuf+1, sizeof(remote_data->passwd));
-				binkp_state = BPI_Auth;
-			}
-			break;
-		
-		case BPMSG_ERR:
-			log("BinkP error: \"%s\"", string_printable(bpi.ibuf+1));
-			GOTO(Abort, HRC_FATAL_ERR);
-			
-		case BPMSG_BSY:
-			log("BinkP busy: \"%s\"", string_printable(bpi.ibuf+1));
-			GOTO(Abort, HRC_TEMP_ERR);
-		}
-	}
-
-Exit:
-	if( binkp_flush_queue(&bpi, bpi.timeout) && rc == HRC_OK )
-		rc = HRC_OTHER_ERR;
-
-Abort:
-	binkp_deinit_bpinfo(&bpi);
-	
-	return rc;
-}
-
-int binkp_transfer(s_protinfo *pi) {
-
-	int  i, n, rc = PRC_NOERROR;
-	bool recv_ready = FALSE;
-	bool send_ready = FALSE;
-	bool rcvd_EOB = FALSE;
-	bool recv_file = FALSE;
-	int  recv_rc = 0;
-	int  send_rc = 0;
-	char *fname = NULL;
-	size_t fsize = 0;
-	time_t ftime = 0;
-	size_t foffs = 0;
-	s_bpinfo bpi;
-  s_binkp_sysinfo *remote;
-  enum {
-    BPT_Start_Send_File,
-    BPT_Wait_M_GET,
-    BPT_Send_File,
-    BPT_Wait_M_GOT,
-    BPT_No_Files,
-    BPT_EOB
-  } binkp_send_state = BPT_Start_Send_File;
-  remote = (s_binkp_sysinfo *) state.handshake->remote_data;
-
-  binkp_init_bpinfo(&bpi);
-
-  while (1) {
-    if (binkp_send_state == BPT_Start_Send_File) {
-      if (p_tx_fopen (pi)) {
-        binkp_send_state = BPT_No_Files;
-      } else {
-	char *name  =        pi->send->net_name;
-	long  total = (long) pi->send->bytes_total;
-	long  time  = (long) pi->send->mod_time;
-	if (remote->options & BINKP_OPT_NR) {
-	  binkp_queuemsgf(&bpi,BPMSG_FILE,"%s %ld %ld -1",name,total,time);
-	  binkp_send_state = BPT_Wait_M_GET;
-	  /*log("binkp going to BPT_Wait_M_GET");*/
-	} else {
-	  binkp_queuemsgf(&bpi,BPMSG_FILE,"%s %ld %ld 0", name,total,time);
-	  binkp_send_state = BPT_Send_File;
-	}
-      }
-    }
-    if (binkp_send_state == BPT_Send_File) {
-      /*log("binkp BPT_Send_File");*/
-      if (bpi.opos == 0 && bpi.n_msgs == 0) {
-	if((n = p_tx_readfile (bpi.obuf+BINKP_BLK_HDRSIZE,4096,pi))<0) {
-	  p_tx_fclose (pi);
-	  binkp_send_state = BPT_Start_Send_File;
-	} else {
-	  binkp_puthdr (bpi.obuf, (unsigned) (n & 0x7fff));
-	  bpi.opos = n + BINKP_BLK_HDRSIZE;
-	  pi->send->bytes_sent += n;
-	  if (pi->send->eofseen) {
-	    pi->send->status = FSTAT_WAITACK;
-	    if (remote->options & BINKP_OPT_NR)
-	         binkp_send_state = BPT_Wait_M_GOT;
-	    else binkp_send_state = BPT_Start_Send_File;
-	  }
-	}
-      }
-    }
-    if (binkp_send_state == BPT_No_Files) {
-      for (i = 0; i < pi->n_sentfiles; i++) {
-        if (pi->sentfiles[i].status == FSTAT_WAITACK) break;
-      }
-      if (i == pi->n_sentfiles) {
-        binkp_queuemsg (&bpi, BPMSG_EOB, NULL, NULL);
-        binkp_send_state = BPT_EOB;
-      }
-    }
-    /* End of the current batch (start the next batch if need). */
-    if (binkp_send_state == BPT_EOB && rcvd_EOB) {
-      if (remote->options & BINKP_OPT_MB && bpi.msgs_in_batch > 2) {
-	bpi.msgs_in_batch = 0;
-	binkp_send_state = BPT_Start_Send_File;
-	rcvd_EOB = FALSE;
-	continue;
-      }
-      break;
-    }
-		recv_ready = send_ready = FALSE;
-		if( tty_select(&recv_ready, (bpi.opos || bpi.n_msgs) ?
-		               &send_ready : NULL, bpi.timeout) < 0 )
-			gotoexit(PRC_ERROR);
-		
-		recv_rc = BPMSG_NONE;
-		send_rc = 0;
-		
-		if( recv_ready && (recv_rc = binkp_recv(&bpi)) == BPMSG_EXIT )
-			gotoexit(PRC_ERROR);
-		if( send_ready && (send_rc = binkp_send(&bpi)) < 0 )
-			gotoexit(PRC_ERROR);
-	
-    switch(recv_rc) {
-      case BPMSG_NONE:
-			break;
-		case BPMSG_DATA: /* Got new data block */
-			if( recv_file )
-			{
-				if( (n = p_rx_writefile(bpi.ibuf, bpi.isize, pi)) < 0 )
-				{
-					/* error writing file */
-					if( n == -2 )
-					{
-						binkp_queuemsgf(&bpi, BPMSG_GOT, "%s %ld %ld",
-							pi->recv->net_name, (long)pi->recv->bytes_total,
-							(long)pi->recv->mod_time);
-					}
-					else
-					{
-						binkp_queuemsgf(&bpi, BPMSG_SKIP, "%s %ld %ld",
-							pi->recv->net_name, (long)pi->recv->bytes_total,
-							(long)pi->recv->mod_time);
-					}
-					recv_file = FALSE;
-					p_rx_fclose(pi);
-				}
-				else
-				{
-					pi->recv->bytes_received += bpi.isize;
-
-					/* Was it the last data block? */
-					if( pi->recv->bytes_received > pi->recv->bytes_total )
-					{
-						log("binkp got too many data (%ld, %ld expected)",
-							(long)pi->recv->bytes_received,
-							(long)pi->recv->bytes_total);
-
-						recv_file = FALSE;
-						pi->recv->status = FSTAT_REFUSED;
-						(void)p_rx_fclose(pi);
-						
-						binkp_queuemsgf(&bpi, BPMSG_SKIP, "%s %ld %ld",
-							pi->recv->net_name, (long)pi->recv->bytes_total,
-							(long)pi->recv->mod_time);
-					}
-					else if( pi->recv->bytes_received == pi->recv->bytes_total )
-					{
-						recv_file = FALSE;
-						pi->recv->status = FSTAT_SUCCESS;
-						if( !p_rx_fclose(pi) )
-						{
-							binkp_queuemsgf(&bpi, BPMSG_GOT, "%s %ld %ld",
-								pi->recv->net_name, (long)pi->recv->bytes_total,
-								(long)pi->recv->mod_time);
-						}
-						else
-						{
-							binkp_queuemsgf(&bpi, BPMSG_SKIP, "%s %ld %ld",
-								pi->recv->net_name, (long)pi->recv->bytes_total,
-								(long)pi->recv->mod_time);
-						}
-					}
-				}
-			}
-#ifdef DEBUG
-			else
-				DEB((D_PROT, "ignore received data block"));
-#endif
-			break;
-			
-		case BPMSG_FILE:
-			
-			if( binkp_parsfinfo(bpi.ibuf+1, &fname,
-			    &fsize, &ftime, &foffs) )
-			{
-				log ("BinkP error: M_FILE: %s", bpi.ibuf + 1);
-				binkp_queuemsg(&bpi, BPMSG_ERR, "FILE: ", "unparsable arguments");
-				goto FinishSession;
-			}
-			
-			if( pi->recv && !p_compfinfo(pi->recv, fname, fsize, ftime)
-			 && pi->recv->bytes_skipped == foffs && pi->recv->fp )
-			{
-				recv_file = TRUE;
-				break;
-			}
-			
-			if (recv_file) {
-			  p_rx_fclose (pi);
-			  recv_file = FALSE;
-			}
-			switch(p_rx_fopen(pi, fname, fsize, ftime, 0)) {
-			case 0:
-				if (pi->recv->bytes_skipped == foffs)
-				{
-					recv_file = TRUE;
-					break;
-				}
-				binkp_queuemsgf(&bpi, BPMSG_GET, "%s %ld %ld %ld",
-					pi->recv->net_name, (long)pi->recv->bytes_total,
-					(long)pi->recv->mod_time,
-					(long)pi->recv->bytes_skipped);
-				break;
-			case 1:
-				/* SKIP (non-destructive) */
-				binkp_queuemsgf(&bpi, BPMSG_SKIP, "%s %ld %ld",
-					pi->recv->net_name, (long)pi->recv->bytes_total,
-					(long)pi->recv->mod_time);
-				break;
-			case 2:
-				/* SKIP (destructive) */
-				binkp_queuemsgf(&bpi, BPMSG_GOT, "%s %ld %ld",
-					pi->recv->net_name, (long)pi->recv->bytes_total,
-					(long)pi->recv->mod_time);
-				break;
-			default:
-				ASSERT_MSG();
-			}
-			break;
-			
-		case BPMSG_EOB: /* End Of Batch */
-			if( recv_file )
-			{
-				p_rx_fclose(pi);
-				recv_file = FALSE;
-			}
-			rcvd_EOB = TRUE;
-			break;
-			
-      case BPMSG_GOT:
-      case BPMSG_SKIP:
-	if (binkp_parsfinfo (bpi.ibuf+1,&fname,&fsize,&ftime,NULL)) {
-	  char *m = recv_rc == BPMSG_GOT ? "M_GOT" : "M_SKIP";
-	  binkp_queuemsgf (&bpi, BPMSG_ERR, "%s: %s", m, bpi.ibuf + 1);
-	  log ("BinkP error: %s: %s", m, bpi.ibuf + 1);
-	  binkp_send_state = BPT_No_Files;
-	  rc = PRC_ERROR;
-	  break;
-	}
-	for(i = 0; i < pi->n_sentfiles; i++ ) {
-	  if (!p_compfinfo (&pi->sentfiles[i], fname, fsize, ftime)) {
-	    s_finfo *tmp = pi->send;
-	    pi->send = &pi->sentfiles[i];
-	    if (recv_rc == BPMSG_SKIP) {
-	      pi->send->status = FSTAT_REFUSED;
-	    } else {
-	      if (pi->send->status == FSTAT_WAITACK) {
-	        pi->send->status = FSTAT_SUCCESS;
-	      } else {
-		pi->send->status = FSTAT_SKIPPED;
-	      }
-	    }
-	    p_tx_fclose(pi);
-	    pi->send = tmp;
-	    break;
-	  }
-	}
-	if (!strcmp (pi->send->net_name, fname)) {
-	  if (binkp_send_state == BPT_Send_File 	||
-	      binkp_send_state == BPT_Wait_M_GET	||
-	      binkp_send_state == BPT_Wait_M_GOT)	{
-	      binkp_send_state =  BPT_Start_Send_File;
-	  }
-	}
-	break;
-
-		case BPMSG_ERR:
-			log("remote report error: \"%s\"", bpi.ibuf+1);
-			gotoexit(PRC_ERROR);
-			break;
-			
-		case BPMSG_BSY:
-			log("remote busy error: \"%s\"", bpi.ibuf+1);
-			gotoexit(PRC_ERROR);
-			break;
-			
-		case BPMSG_GET:
-			if( binkp_parsfinfo(bpi.ibuf+1, &fname, &fsize, &ftime, &foffs) == 0 )
-			{
-				if(!p_compfinfo(pi->send,fname,fsize,ftime))
-				{
-					if( fseek(pi->send->fp, foffs, SEEK_SET) == -1 )
-					{
-						log("cannot send file from requested offset %ld", (long)foffs);
-						p_tx_fclose(pi);
-						binkp_send_state = BPT_Start_Send_File;
-					}
-					else
-					{
-						log("sending \"%s\" from %ld offset",
-							pi->send->fname, (long)foffs);
-						pi->send->bytes_skipped = foffs;
-						pi->send->bytes_sent = foffs;
-						binkp_queuemsgf(&bpi, BPMSG_FILE, "%s %ld %ld %ld",
-							pi->send->net_name, (long)pi->send->bytes_total,
-							(long)pi->send->mod_time, (long)foffs);
-						binkp_send_state = BPT_Send_File;
-					}
-				}
-			}
-			break;
-			
-		default:
-			log("binkp got unhandled msg #%d", recv_rc);
-			break;
-		}
-	} /* end of while( !sent_EOB || !rcvd_EOB ) */
-	
-
-FinishSession:
-	if( binkp_flush_queue(&bpi, bpi.timeout) && rc == PRC_NOERROR )
-		rc = PRC_ERROR;
-	
-
-exit:
-	if( pi->send && pi->send->fp ) p_tx_fclose(pi);
-	if( pi->recv && pi->recv->fp ) p_rx_fclose(pi);
-
-	binkp_deinit_bpinfo(&bpi);
-	
-	DEB((D_PROT, "binkp: BINKP exit = %d", rc));
-	
-	return rc;
-}
-

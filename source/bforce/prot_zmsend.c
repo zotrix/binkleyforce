@@ -213,7 +213,7 @@ int tx_zmodem(s_protinfo *pi, bool caller)
 			if( pi->send && pi->send->fp )
 				p_tx_fclose(pi);
 			txtries = 0;
-			txstate = p_tx_fopen(pi) ? ZTX_FIN : ZTX_FINFO;
+			txstate = p_tx_fopen(pi, NULL) ? ZTX_FIN : ZTX_FINFO;
 			break;
 
 		case ZTX_FINFO:

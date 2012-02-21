@@ -19,12 +19,12 @@ int readstr(int s, char *buf, int len) {
     while(1) {
       r=recv(s, &c, 1, 0);
       if(r==0){
-        puts("remote socket shutdown");
+        //puts("remote socket shutdown");
         return -3;
       }
       if(r==-1){
-        puts("error reading string");
-        printf("%d %s\n", errno, strerror(errno));
+        //puts("error reading string");
+        //printf("%d %s\n", errno, strerror(errno));
         return -3;
       }
       if(c=='\n') {
@@ -34,7 +34,7 @@ int readstr(int s, char *buf, int len) {
       *buf++=c;
       len--;
       if(!len) {
-        puts("string buffer overflow");
+        //puts("string buffer overflow");
         return -3;
       }
     }
@@ -48,24 +48,24 @@ int sendstr(int s, const char *buf) {
     while(l>0) {
 	c=send(s, buf, l, 0);
         if(c==-1){
-            puts("error sending string");
-	    printf("%d %s\n", errno, strerror(errno));
+            //puts("error sending string");
+	    //printf("%d %s\n", errno, strerror(errno));
 	    return -3;
         }
         if(c==0){
-            puts("zero send: may loop infinitely");
+            //puts("zero send: may loop infinitely");
 	    return -3;
         }
         l-=c;
     }
     c=send(s, &nl, 1, 0);
         if(c==-1){
-	    puts("error sending string");
-	    printf("%d %s\n", errno, strerror(errno));
+	    //puts("error sending string");
+	    //printf("%d %s\n", errno, strerror(errno));
 	    return -3;
         }
         if(c==0){
-	    puts("zero send: may loop infinitely");
+	    //puts("zero send: may loop infinitely");
 	    return -3;
         }
     return 0;
@@ -107,7 +107,8 @@ void netspool_start(s_netspool_state *state, const char *host, const char *port,
     while(a) {
 	r = connect(s, a->ai_addr, a->ai_addrlen);
 	if(r==-1) {
-	    printf("%d %s\n", errno, strerror(errno));
+	    //printf("%d %s\n", errno, strerror(errno));
+	    ;
 	} else {
 	    break;
 	}
@@ -122,16 +123,16 @@ void netspool_start(s_netspool_state *state, const char *host, const char *port,
     }
 
     r = readstr(s, strbuf, STRBUF);
-    if( r ) { state->state = NS_ERROR; state->error = "IO error"; }
-    puts(strbuf);
+    if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
+    //puts(strbuf); -- hello from remote
 
     snprintf(strbuf, STRBUF, "ADDRESS %s", address);
     r = sendstr(s, strbuf);
-    if( r ) { state->state = NS_ERROR; state->error = "IO error"; }
+    if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
 
     snprintf(strbuf, STRBUF, "PASSWORD %s", password);
     r = sendstr(s, strbuf);
-    if( r ) { state->state = NS_ERROR; state->error = "IO error"; }
+    if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
 
     state->state = NS_READY;
 }
@@ -157,7 +158,7 @@ void netspool_receive(s_netspool_state *state)
 
     r = readstr(state->socket, strbuf, STRBUF);
     if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
-    puts(strbuf);
+    //puts(strbuf);
     if(strcmp(strbuf, "QUEUE EMPTY")==0) {
 	state->state = NS_READY;
 	return;
@@ -165,7 +166,7 @@ void netspool_receive(s_netspool_state *state)
 
     if(strncmp(strbuf, "FILENAME ", 9)==0) {
         strcpy(state->filename, strbuf+9);
-        puts(state->filename);
+        //puts(state->filename);
     } else {
 	state->state = NS_ERROR;
 	state->error = "expected filename or queue empty";
@@ -180,7 +181,7 @@ void netspool_receive(s_netspool_state *state)
 		exit(-5);
 	    } */
 	sscanf(strbuf+7, "%Lu", &state->length);
-	printf("length=%Lu\n", state->length);
+	//printf("length=%Lu\n", state->length);
 	state->state = NS_RECVFILE;
     } else {
 	state->state = NS_ERROR;
@@ -194,7 +195,7 @@ int netspool_read(s_netspool_state *state, void *buf, int buflen)
 {
     int n;
     if( state->length == 0 ) {
-	puts("everithing is read");
+	//puts("everithing is read");
 	return 0;
     }
     
@@ -207,8 +208,8 @@ int netspool_read(s_netspool_state *state, void *buf, int buflen)
     }
     
     if(n==-1) {
-	puts("error reading data");
-	printf("%d %s\n", errno, strerror(errno));
+	//puts("error reading data");
+	//printf("%d %s\n", errno, strerror(errno));
 	state->state = NS_ERROR;
 	state->error = "IO error";
 	return -1;

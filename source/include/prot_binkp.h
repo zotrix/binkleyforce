@@ -54,6 +54,16 @@
 #define BINKP_OPT_SHA1      0x10   /* CRAM-SHA1 authentication */
 #define BINKP_OPT_DES       0x20   /* CRAM-DES authentication */
 
+typedef enum binkp_mode {
+  bmode_failoff,
+  bmode_incoming_handshake,
+  bmode_outgoing_handshake,
+  bmode_transfer,
+  bmode_complete
+} e_binkp_mode;
+
+
+
 typedef struct {
 	s_sysaddr *addrs;
 	int        anum;
@@ -79,9 +89,9 @@ typedef enum {
 	/*
 	 *  Pseudo message types, returned by binkp_recv()
 	 */
-	BPMSG_EXIT = -3,	/* Terminate session */
-	BPMSG_NONE = -2,	/* Got nothing intresting */
-	BPMSG_DATA = -1,	/* Got data block */
+//	BPMSG_EXIT = -3,	/* Terminate session */
+//	BPMSG_NONE = -2,	/* Got nothing intresting */
+//	BPMSG_DATA = -1,	/* Got data block */
 	/*
 	 *  Real BinkP message types
 	 */
@@ -101,62 +111,70 @@ typedef enum {
 } e_bpmsg;
 
 
+//typedef struct {
+//	bool sent;		/* Sent message (queued) */
+//	e_bpmsg type;		/* Message type */
+//	int size;		/* Message size (length of text) */
+//	char *data;		/* Message text */
+//} s_bpmsg;
+
+
+//typedef struct {
+//	char   *obuf;		/* Output buffer */
+//	int     opos;		/* Unsent bytes left in buffer */
+//	char   *optr;		/* Send data from this position */
+//	
+//	char   *ibuf;		/* Our input buffer */
+//	int     ipos;
+//	int     isize;
+////	bool    imsg;		/* Is it message? */
+///	bool    inew;
+//	e_bpmsg imsgtype;	/* Message type */
+  //
+//	int     junkcount;
+//	s_bpmsg *msgqueue;	/* Outgoing messages queue */
+//	int     n_msgs;		/* Number of messages in queue */
+//	int	msgs_in_batch;	/* Number of messages in batch */
+
+//	int     timeout;
+//} s_bpinfo;
+
 typedef struct {
-	bool sent;		/* Sent message (queued) */
-	e_bpmsg type;		/* Message type */
-	int size;		/* Message size (length of text) */
-	char *data;		/* Message text */
-} s_bpmsg;
-
-
-typedef struct {
-	char   *obuf;		/* Output buffer */
-	int     opos;		/* Unsent bytes left in buffer */
-	char   *optr;		/* Send data from this position */
-	
-	char   *ibuf;		/* Our input buffer */
-	int     ipos;
-	int     isize;
-	bool    imsg;		/* Is it message? */
-	bool    inew;
-	e_bpmsg imsgtype;	/* Message type */
-
-	int     junkcount;
-	s_bpmsg *msgqueue;	/* Outgoing messages queue */
-	int     n_msgs;		/* Number of messages in queue */
-	int	msgs_in_batch;	/* Number of messages in batch */
-
-	int     timeout;
-} s_bpinfo;
+  char fn[PATH_MAX];
+  size_t sz;
+  time_t tm;
+  size_t offs;
+} s_bpfinfo;
 
 /* prot_binkp.c */
 int binkp_outgoing(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data);
 int binkp_incoming(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data);
-int binkp_transfer(s_protinfo *pi);
+int binkp_transfer(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data, s_protinfo *pi);
 
 /* prot_binkp_misc.c */
-void binkp_init_bpinfo(s_bpinfo *bpi);
-void binkp_deinit_bpinfo(s_bpinfo *bpi);
+//void binkp_init_bpinfo(s_bpinfo *bpi);
+//void binkp_deinit_bpinfo(s_bpinfo *bpi);
 int  binkp_gethdr(const char *s);
 int  binkp_getmsgtype(char ch);
 void binkp_puthdr(char *s, unsigned int u);
 void binkp_putmsgtype(char *s, e_bpmsg msg);
-void binkp_queuemsg(s_bpinfo *bpi, e_bpmsg msg, const char *s1, const char *s2);
-void binkp_queuemsgf(s_bpinfo *bpi, e_bpmsg msg, const char *fmt, ...);
-int  binkp_parsfinfo(char *s, char **fn, size_t *sz, time_t *tm, size_t *offs);
-int  binkp_buffer_message(s_bpinfo *bpi, s_bpmsg *msg);
-int  binkp_send_buffer(s_bpinfo *bpi);
-int  binkp_send(s_bpinfo *bpi);
-int  binkp_flush_queue(s_bpinfo *bpi, int timeout);
-int  binkp_recv(s_bpinfo *bpi);
+//void binkp_queuemsg(s_bpinfo *bpi, e_bpmsg msg, const char *s1, const char *s2);
+//void binkp_queuemsgf(s_bpinfo *bpi, e_bpmsg msg, const char *fmt, ...);
+int  binkp_parsfinfo(const char *s, s_bpfinfo *fi, bool with_offset);
+//int  binkp_buffer_message(s_bpinfo *bpi, s_bpmsg *msg);
+//int  binkp_send_buffer(s_bpinfo *bpi);
+//int  binkp_send(s_bpinfo *bpi);
+//int  binkp_flush_queue(s_bpinfo *bpi, int timeout);
+//int  binkp_recv(s_bpinfo *bpi);
 void binkp_update_sysinfo(s_binkp_sysinfo *binkp);
 void binkp_log_options(s_binkp_sysinfo *remote);
 void binkp_log_sysinfo(s_binkp_sysinfo *binkp);
-void binkp_queue_sysinfo(s_bpinfo *bpi, s_binkp_sysinfo *binkp);
+//void binkp_queue_sysinfo(s_bpinfo *bpi, s_binkp_sysinfo *binkp);
 void binkp_set_sysinfo(s_binkp_sysinfo *binkp, s_faddr *remote_addr, bool caller);
 void binkp_parse_options(s_binkp_sysinfo *binkp, char *options);
 
 /* prot_binkp_api.c */
 extern s_handshake_protocol handshake_protocol_binkp;
+
 
 #endif /* _P_BINKP_H_ */

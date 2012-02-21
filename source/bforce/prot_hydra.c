@@ -1327,7 +1327,7 @@ int hydra_batch(s_hydrainfo *hi, s_protinfo *pi)
 			if( pi->send && pi->send->fp )
 				p_tx_fclose(pi);
 			
-			send_EOB = p_tx_fopen(pi) ? TRUE : FALSE;
+			send_EOB = p_tx_fopen(pi, NULL) ? TRUE : FALSE;
 			
 			txtries = 0;
 			txstate = HTX_FINFO;

@@ -132,7 +132,7 @@ int session_addrs_check(s_sysaddr *addrs, int anum, const char *passwd,
 	char pbuf[32];
 	bool failure = FALSE;
 	bool success = FALSE;
-	bool cram = (challenge && *challenge);
+	bool cram = challenge;
 	
 	if( !anum )
 		return -1;
@@ -156,11 +156,12 @@ int session_addrs_check(s_sysaddr *addrs, int anum, const char *passwd,
 				{
 					char digest_bin[16];
 					char digest_hex[33];
-				
+
 					md5_cram_get(pbuf, challenge, challenge_length, digest_bin);
-			
+
 					/* Encode digest to the hex string */
 					string_bin_to_hex(digest_hex, digest_bin, 16);
+					log("good password is %s", digest_hex);
 
 					if( strcasecmp(passwd, digest_hex) == 0 )
 						good_passwd = TRUE;
@@ -185,7 +186,7 @@ int session_addrs_check(s_sysaddr *addrs, int anum, const char *passwd,
 			}
 		}
 		else
-			/* not password protected address */
+			log("not password protected address");
 			addrs[i].good = TRUE;
 	}
 
@@ -813,7 +814,7 @@ int session(void)
 	
 		switch(state.handshake->protocol) {
 		case PROT_BINKP:
-			rc = binkp_transfer(&pi);
+			rc = binkp_transfer((s_binkp_sysinfo *)state.handshake->local_data, (s_binkp_sysinfo *)state.handshake->remote_data, &pi);
 			break;
 		case PROT_ZMODEM:
 		case PROT_ZEDZAP:
