@@ -55,6 +55,7 @@ typedef struct {
     int batch_recv_count;
     e_file_receive_status frs;
     int emptyloop;
+    bool continuesend;
 } s_binkp_state;
 
 int binkp_getforsend(s_binkp_state *bstate, char *buf, int *block_type, unsigned short *block_length);
@@ -89,6 +90,7 @@ int binkp_loop(s_binkp_state *bstate) {
     bstate->batch_recv_count = 0;
     bstate->frs = frs_nothing;
     bstate->emptyloop = 0;
+    bstate->continuesend = false;
 
     unsigned short read_pos=0;
     unsigned short read_blklen=0;
@@ -113,7 +115,11 @@ int binkp_loop(s_binkp_state *bstate) {
     //     session criterium           handshake criterium
     while (!bstate->complete || bstate->waiting_got) {
         log("loop s: %d r: %d", bstate->batchsendcomplete, bstate->batchreceivecomplete);
-        if(have_to_write==0 && (!no_more_to_send || bstate->extracmd[0]!=-1)) {
+        if (bstate->continuesend) {
+            no_more_to_send = false;
+            bstate->continuesend = false;
+        }
+        if (have_to_write==0 && (!no_more_to_send || bstate->extracmd[0]!=-1)) {
             m = binkp_getforsend(bstate, writebuf+BINKP_HEADER, &block_type, &block_length);
             if( m==1) {
                 //log("got block for sending %d %hu", block_type, block_length);
@@ -520,7 +526,7 @@ case 4:
                     *block_length = 1+sprintf(buf+1, "%s %ld %ld -1", bstate->pi->send->net_name, 
                             bstate->pi->send->bytes_total, bstate->pi->send->mod_time);
                     *block_type = BINKP_BLK_CMD;
-                    return 1; // no state change. phase would be changed to 1 by recv when M_GET is received
+                    return 2; // no state change. phase would be changed to 1 by recv when M_GET is received
                 }
                 bstate->phase += 1;
 
@@ -557,7 +563,7 @@ case 4:
                     int i;
                     bool ack = false;
                     for(i = 0; i < bstate->pi->n_sentfiles; i++ ) {
-                        if (p_compfinfo(&bstate->pi->sentfiles[i], bstate->pi->send->fname, bstate->pi->send->bytes_total, bstate->pi->send->mod_time) == 0) {
+                        if (p_compfinfo(&bstate->pi->sentfiles[i], bstate->pi->send->net_name, bstate->pi->send->bytes_total, bstate->pi->send->mod_time) == 0) {
                             if (bstate->pi->sentfiles[i].status == FSTAT_SUCCESS) {
                                 ack = true;
                                 log("acknowledged");
@@ -566,9 +572,10 @@ case 4:
                         }
                     }
                     if (!ack) {
-                        log("wait for ACK");
+                        log("wait for M_GOT");
                         return 0;
                     }
+                    log("M_GOT received, going to next file");
                 } else {
                     log("do not wait M_GOT");
                 }
@@ -932,6 +939,7 @@ case BPMSG_GET:              /* Get a file from offset */
 							bstate->pi->send->net_name, (long)bstate->pi->send->bytes_total,
 							(long)bstate->pi->send->mod_time, (long)bstate->pi->send->bytes_sent);
 		    bstate->extraislast = false;
+		    bstate->continuesend = true;
 		    return 1;
 		
                 }
@@ -939,11 +947,12 @@ case BPMSG_GET:              /* Get a file from offset */
 
             if (bstate->pi->send) if (bstate->pi->send->netspool) {
                 log("ignore differing M_GET for netspool");
+                bstate->continuesend = true;
                 return 1;
             }
 
             if (bstate->pi->send) if (p_compfinfo(bstate->pi->send, getfi.fn, getfi.sz, getfi.tm)==0) {
-		log("resending \"%s\" from %ld offset", bstate->pi->send->fname, (long)getfi.offs);
+		log("resending \"%s\" from %ld offset", bstate->pi->send->net_name, (long)getfi.offs);
                 if( p_tx_rewind(bstate->pi, getfi.offs) != 0 ) {
                     log("failed to rewind");
                     p_tx_fclose(bstate->pi);
@@ -956,6 +965,7 @@ case BPMSG_GET:              /* Get a file from offset */
 							(long)bstate->pi->send->mod_time, (long)getfi.offs);
 		bstate->extraislast = false;
 		bstate->phase = 2;
+		bstate->continuesend = true;
 		return 1;
 	    }
 
@@ -978,7 +988,7 @@ case BPMSG_GET:              /* Get a file from offset */
                 return -1;
             }
             bstate->waiting_got = true;
-	    log("sending \"%s\" from %ld offset", bstate->pi->send->fname, (long)getfi.offs);
+	    log("sending \"%s\" from %ld offset", bstate->pi->send->net_name, (long)getfi.offs);
 	    bstate->pi->send->bytes_skipped = getfi.offs;
 	    bstate->pi->send->bytes_sent = getfi.offs;
 	    bstate->extracmd[0] = BPMSG_FILE;
@@ -986,6 +996,7 @@ case BPMSG_GET:              /* Get a file from offset */
 	                                        (long)bstate->pi->send->mod_time, (long)getfi.offs);
 	    bstate->extraislast = false;
 	    bstate->phase = 2;
+	    bstate->continuesend = true;
 	    return 1;
         }
         log("unknown command %d received", buf[0]);
