@@ -921,7 +921,7 @@ case BPMSG_GET:              /* Get a file from offset */
 
             if (bstate->extracmd[0] != -1) return 0;
 
-            if (p_compfinfo(bstate->pi->send, getfi.fn, getfi.sz, getfi.tm)==0) {
+            if (bstate->pi->send) if (p_compfinfo(bstate->pi->send, getfi.fn, getfi.sz, getfi.tm)==0) {
                 log("M_GET for currently transmitted file");
                 if (getfi.offs==bstate->pi->send->bytes_sent) {
                     log("M_GET offset match current (seems NR mode)");
@@ -937,18 +937,18 @@ case BPMSG_GET:              /* Get a file from offset */
                 }
             }
 
-            if (bstate->pi->send->netspool) {
+            if (bstate->pi->send) if (bstate->pi->send->netspool) {
                 log("ignore differing M_GET for netspool");
                 return 1;
             }
 
-            if (bstate->pi->send && p_compfinfo(bstate->pi->send, getfi.fn, getfi.sz, getfi.tm)==0) {
+            if (bstate->pi->send) if (p_compfinfo(bstate->pi->send, getfi.fn, getfi.sz, getfi.tm)==0) {
+		log("resending \"%s\" from %ld offset", bstate->pi->send->fname, (long)getfi.offs);
                 if( p_tx_rewind(bstate->pi, getfi.offs) != 0 ) {
                     log("failed to rewind");
                     p_tx_fclose(bstate->pi);
                     return -1;
                 }
-		log("sending \"%s\" from %ld offset", bstate->pi->send->fname, (long)getfi.offs);
 		bstate->pi->send->bytes_skipped = getfi.offs;
 		bstate->pi->send->bytes_sent = getfi.offs;
 		bstate->extracmd[0] = BPMSG_FILE;
@@ -967,7 +967,7 @@ case BPMSG_GET:              /* Get a file from offset */
             s_filehint hint;
             hint.fn = getfi.fn;
             hint.sz = getfi.sz;
-            hint.tm = getfi.tm;;
+            hint.tm = getfi.tm;
             if( p_tx_fopen(bstate->pi, &hint) != 0 ) {
                 log("could not satisfy M_GET");
                 return -1;

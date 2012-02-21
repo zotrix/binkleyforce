@@ -43,7 +43,7 @@ const char *Protocols[] =
 
 static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_filehint *hint)
 {
-        log("prot_get_next_file %d", hint);
+        log("prot_get_next_file"); // %s %d", hint->fn, hint->sz);
 	s_filelist *ptrl = NULL;
 	s_filelist *best = NULL;
 	s_fsqueue *q = &state.queue;
@@ -121,7 +121,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_filehint *hin
 	    char *host = conf_string(cf_netspool_host);
 	    char *port = conf_string(cf_netspool_port);
 	    if(host==NULL) {
-		log("netspool is not configured");
+		//log("netspool is not configured");
 	        state.netspool.state = NS_UNCONF;
 	    } else {
 		snprintf(address, 299, state.node.addr.point? "%d:%d/%d.%d": "%d:%d/%d",
@@ -143,10 +143,10 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_filehint *hin
 	}
 
 	if(state.netspool.state == NS_RECEIVING) {
-	    log("netspool begin receive");
+	    //log("netspool begin receive");
 	    netspool_receive(&state.netspool);
 	} else {
-	    log("netspool could not start receive");
+	    //log("netspool could not start receive");
 	    return 1;
 	}
 
@@ -157,12 +157,12 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_filehint *hin
 	}
 
 	if(state.netspool.state == NS_READY) {
-	    log("netspool queue empty");
+	    //log("netspool queue empty");
 	    netspool_end(&state.netspool);
 	}
 
 	if(state.netspool.state==NS_ERROR) {
-	    log("no next file: netspool error %s", state.netspool.error);
+	    log("netspool error %s", state.netspool.error);
 	}
 
 #endif
@@ -227,6 +227,31 @@ int p_tx_fopen(s_protinfo *pi, s_filehint *hint)
 
 	if( state.sopts.holdall )
 		return 1;
+		
+	if (hint) {
+	    log("trying to reopen file");
+	    int i;
+	    for (i=0; i++; i<pi->n_sentfiles) {
+	        if (strcmp(pi->sentfiles[i].net_name, hint->fn)==0) {
+	            log("name match");
+	            if (pi->sentfiles[i].bytes_total == hint->sz) {
+	                log("size match");
+	                if (pi->sentfiles[i].mod_time == hint->tm) {
+	                    log("time match");
+	                    if (!pi->sentfiles[i].fp) {
+	                        log("already closed");
+	                        return -1;
+	                    }
+	                    pi->send = pi->sentfiles + i;
+	                    pi->send->eofseen = FALSE;
+                            pi->send->status = FSTAT_PROCESS;
+                            log("reopened %s", pi->send->fname);
+	                    return 0;
+	                }
+	            }
+	        }
+	    }
+	}
 
 get_next_file:
 	if( prot_get_next_file(&ptrl, pi, hint) ) {
