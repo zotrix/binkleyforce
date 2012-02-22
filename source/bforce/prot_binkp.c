@@ -121,7 +121,7 @@ int binkp_loop(s_binkp_state *bstate) {
         }
         if (have_to_write==0 && (!no_more_to_send || bstate->extracmd[0]!=-1)) {
             m = binkp_getforsend(bstate, writebuf+BINKP_HEADER, &block_type, &block_length);
-            if( m==1) {
+            if(m==1 || m==3) {
                 //log("got block for sending %d %hu", block_type, block_length);
                 write_pos = 0;
                 have_to_write = block_length+BINKP_HEADER;
@@ -135,13 +135,15 @@ int binkp_loop(s_binkp_state *bstate) {
                     return -1;
                 }
                 writebuf[1] = block_length&0xff;
-            } else if (m==2) {
+            }
+            if (m==2 || m==3) {
                 log("no more to send");
                 no_more_to_send = true;
             }
-            else if (m==0) {
+            if (m==0) {
                 log("binkp: nothing to write");
-            } else {
+            }
+            if (m<0 || m>3) {
                 log("getforsend error");
                 return -1;
             }
@@ -524,9 +526,9 @@ case 4:
                     log("send M_FILE with -1");
                     buf[0] = BPMSG_FILE;
                     *block_length = 1+sprintf(buf+1, "%s %ld %ld -1", bstate->pi->send->net_name, 
-                            bstate->pi->send->bytes_total, bstate->pi->send->mod_time);
+                            (long)bstate->pi->send->bytes_total, (long)bstate->pi->send->mod_time);
                     *block_type = BINKP_BLK_CMD;
-                    return 2; // no state change. phase would be changed to 1 by recv when M_GET is received
+                    return 3; // no state change. phase would be changed to 1 by recv when M_GET is received
                 }
                 bstate->phase += 1;
 
@@ -865,7 +867,7 @@ case BPMSG_SKIP:
 	            if (buf[0] == BPMSG_SKIP) {
 	                if (bstate->pi->send->netspool) {
 	                    log("cannot skip netspool");
-	                    return -1;
+	                    return -1; // no reason to continue sending
 	                }
 	                log("skipped %s", fi.fn);
 	                bstate->pi->send->status = FSTAT_REFUSED;
@@ -877,7 +879,7 @@ case BPMSG_SKIP:
 	                    log("confirmed not sent file - skipped %s", fi.fn);
 	                    if (bstate->pi->send->netspool) {
 	                        log("cannot skip netspool");
-	                        return -1;
+	                        return -1; // no reason to continue sending
 	                    }
 		            bstate->pi->send->status = FSTAT_SKIPPED;
 	                }

@@ -43,6 +43,7 @@ int binkp_parsfinfo(const char *str, s_bpfinfo *fi, bool with_offset)
         log("too long string, overflow may occur");
         return -1;
     }
+    log("info to parse: %s", str);
     r = sscanf(str, with_offset? "%s %d %d %d": "%s %d %d", &fi->fn, &fi->sz, &fi->tm, &fi->offs);
     if (r==(with_offset? 4: 3)) {
         return 0;
