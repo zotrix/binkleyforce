@@ -61,7 +61,7 @@ typedef struct {
 int binkp_getforsend(s_binkp_state *bstate, char *buf, int *block_type, unsigned short *block_length);
 int binkp_doreceiveblock(s_binkp_state *bstate, char *buf, int block_type, unsigned short block_length);
 void binkp_process_NUL(s_binkp_sysinfo *remote_data, char *buffer);
-void binkp_process_ADR(s_binkp_sysinfo *remote_data, char *buffer);
+void binkp_process_ADR(char *buffer);
 
 int binkp_loop(s_binkp_state *bstate) {
     unsigned char readbuf[BINKP_HEADER+BINKP_MAXBLOCK+1];
@@ -419,20 +419,20 @@ case 2:
         buf[0] = BPMSG_ADR;
         wr_pos = 1;
         int i;
-	for( i = 0; i < bstate->local_data->anum; i++ )
+	for( i = 0; i < state.n_localaddr; i++ )
 	{
 		if (i) wr_pos += sprintf(buf+wr_pos, " ");
-		if (bstate->local_data->addrs[i].addr.point) {
+		if (state.localaddrs[i].addr.point) {
                     wr_pos += sprintf(buf+wr_pos, "%d:%d/%d.%d@%s",
-	                 bstate->local_data->addrs[i].addr.zone, bstate->local_data->addrs[i].addr.net,
-	                 bstate->local_data->addrs[i].addr.node, bstate->local_data->addrs[i].addr.point,
-	                 bstate->local_data->addrs[i].addr.domain);
+	                 state.localaddrs[i].addr.zone, state.localaddrs[i].addr.net,
+	                 state.localaddrs[i].addr.node, state.localaddrs[i].addr.point,
+	                 state.localaddrs[i].addr.domain);
 	        }
 	        else {
                     wr_pos += sprintf(buf+wr_pos, "%d:%d/%d@%s",
-	                 bstate->local_data->addrs[i].addr.zone, bstate->local_data->addrs[i].addr.net,
-	                 bstate->local_data->addrs[i].addr.node,
-	                 bstate->local_data->addrs[i].addr.domain);
+	                 state.localaddrs[i].addr.zone, state.localaddrs[i].addr.net,
+	                 state.localaddrs[i].addr.node,
+	                 state.localaddrs[i].addr.domain);
 	        }
 	}
 	*block_type = BINKP_BLK_CMD;
@@ -635,9 +635,9 @@ case BPMSG_ADR:              /* List of addresses */
                 return -1;
             }
             if( bstate->extracmd[0] !=-1 ) return 0; // suspend !!!
-            binkp_process_ADR(bstate->remote_data, buf+1);
+            binkp_process_ADR(buf+1);
 
-	    if( !bstate->remote_data->anum ) {
+	    if( !state.n_remoteaddr ) {
 	        log("error: remote did not supplied any addresses");
 	        if( bstate->extracmd[0] !=-1 ) return 0; // suspend
 	        bstate->extracmd[0] = BPMSG_BSY;
@@ -653,9 +653,9 @@ case BPMSG_ADR:              /* List of addresses */
 		bstate->extraislast = false;
 		sprintf(bstate->extracmd+1,"OPT MB");
 		s_override ovr;
-		for(i = 0; i < bstate->remote_data->anum; i++) {
+		for(i = 0; i < state.n_remoteaddr; i++) {
 		    ovr.sFlags = "";
-		    override_get (&ovr, bstate->remote_data->addrs[i].addr, 0);
+		    override_get (&ovr, state.remoteaddrs[i].addr, 0);
 		    if (nodelist_checkflag (ovr.sFlags, "NR")==0) {
 			strcat (bstate->extracmd+1, " NR");
 			break;
@@ -666,7 +666,7 @@ case BPMSG_ADR:              /* List of addresses */
 
 	    if (bstate->mode == bmode_outgoing_handshake) {
 	        // check that remote has the address we call
-		if( session_addrs_check_genuine(bstate->remote_data->addrs, bstate->remote_data->anum,
+		if( session_addrs_check_genuine(state.remoteaddrs, state.n_remoteaddr,
 			                             state.node.addr) ) {
                     log("error: remote does not have the called address");
 	            bstate->extracmd[0] = BPMSG_ERR;
@@ -678,7 +678,7 @@ case BPMSG_ADR:              /* List of addresses */
 		strncpy(bstate->remote_data->passwd, bstate->local_data->passwd, BINKP_MAXPASSWD);
 		bstate->remote_data->passwd[BINKP_MAXPASSWD] = '\0';
 
-		if( session_addrs_check(bstate->remote_data->addrs, bstate->remote_data->anum,
+		if( session_addrs_check(state.remoteaddrs, state.n_remoteaddr,
 			                             bstate->remote_data->passwd, NULL, 0) ) {
 	            log("error: Security violation");
 	            bstate->extracmd[0] = BPMSG_ERR;
@@ -715,7 +715,7 @@ case BPMSG_PWD:              /* Session password */
 	        return 1;
 	    }
 	    // lock addresses
-	    if( session_addrs_lock(bstate->remote_data->addrs, bstate->remote_data->anum) ) {
+	    if( session_addrs_lock(state.remoteaddrs, state.n_remoteaddr) ) {
 	        log("error locking addresses of the remote");
 	        if( bstate->extracmd[0] !=-1 ) return 0; // suspend if extra is occupied
 	        bstate->extracmd[0] = BPMSG_BSY;
@@ -815,7 +815,7 @@ case BPMSG_OK:               /* Password was acknowleged (data ignored) */
                 log("unexpected M_OK");
                 return -1;
             }
-            if (session_addrs_lock(bstate->remote_data->addrs, bstate->remote_data->anum)) {
+            if (session_addrs_lock(state.remoteaddrs, state.n_remoteaddr)) {
                 log("error: unable to lock");
                 if (bstate->extracmd[0]!=-1) return 0;
                 bstate->extracmd[0] = BPMSG_BSY;
@@ -1148,7 +1148,7 @@ void binkp_process_NUL(s_binkp_sysinfo *remote_data, char *buffer)
 		log("BinkP NUL: \"%s\"", string_printable(buffer)); // NUL cannot be invalid as it is optional info
 }
 
-void binkp_process_ADR(s_binkp_sysinfo *remote_data, char *buffer)
+void binkp_process_ADR(char *buffer)
 {
 	s_faddr addr;
 	char *p, *q;
@@ -1158,7 +1158,7 @@ void binkp_process_ADR(s_binkp_sysinfo *remote_data, char *buffer)
 		if( ftn_addrparse(&addr, p, FALSE) )
 			log("BinkP got unparsable address \"%s\"", string_printable(p));
 		else
-			session_addrs_add(&remote_data->addrs, &remote_data->anum, addr);
+			session_addrs_add(&state.remoteaddrs, &state.n_remoteaddr, addr);
 	}
 }
 
@@ -1167,19 +1167,19 @@ int binkp_auth_incoming(s_binkp_sysinfo *remote_data)
 	if( remote_data->challenge_length > 0
 	 && strncmp(remote_data->passwd, "CRAM-MD5-", 9) == 0 )
 	{
-	        log("md5 auth addrs %s", remote_data->addrs);
-	        log("md5 auth anum %d", remote_data->anum);
-	        log("md5 auth passwd %s", remote_data->passwd + 9);
-	        log("md5 auth challenge %s", remote_data->challenge);
-	        log("md5 auth challenge len %d", remote_data->challenge_length);
-		return session_addrs_check(remote_data->addrs,
-		                           remote_data->anum,
+	        //log("md5 auth addrs %s", remote_data->addrs);
+	        //log("md5 auth anum %d", remote_data->anum);
+	        //log("md5 auth passwd %s", remote_data->passwd + 9);
+	        //log("md5 auth challenge %s", remote_data->challenge);
+	        //log("md5 auth challenge len %d", remote_data->challenge_length);
+		return session_addrs_check(state.remoteaddrs,
+		                           state.n_remoteaddr,
 		                           remote_data->passwd + 9,
 		                           remote_data->challenge,
 		                           remote_data->challenge_length);
 	}
 	
 	log("plain-text auth");
-	return session_addrs_check(remote_data->addrs, remote_data->anum,
+	return session_addrs_check(state.remoteaddrs, state.n_remoteaddr,
 	                           remote_data->passwd, NULL, 0);
 }

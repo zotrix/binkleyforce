@@ -65,8 +65,8 @@ typedef enum binkp_mode {
 
 
 typedef struct {
-	s_sysaddr *addrs;
-	int        anum;
+//	s_sysaddr *addrs;
+//	int        anum;
 	char       passwd[BINKP_MAXPASSWD+1];
 	char       systname[BINKP_MAXSYSTNAME+1];
 	char       location[BINKP_MAXLOCATION+1];

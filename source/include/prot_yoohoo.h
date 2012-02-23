@@ -22,8 +22,8 @@
  */
 typedef struct
 {
-	s_sysaddr *addrs;         /* FTN address */
-	int       anum;
+//	s_sysaddr *addrs;         /* FTN address */
+//	int       anum;
 	int       product_code;   /* product code */
 	int       version_maj;    /* major revision of the product */
 	int       version_min;    /* minor revision of the product */

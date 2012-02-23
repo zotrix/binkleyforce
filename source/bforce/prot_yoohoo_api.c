@@ -24,7 +24,7 @@ void yoohoo_init(s_handshake_protocol *THIS);
 void yoohoo_deinit(s_handshake_protocol *THIS);
 int yoohoo_incoming(s_handshake_protocol *THIS);
 int yoohoo_outgoing(s_handshake_protocol *THIS);
-s_faddr *yoohoo_remote_address(s_handshake_protocol *THIS);
+//s_faddr *yoohoo_remote_address(s_handshake_protocol *THIS);
 char *yoohoo_remote_password(s_handshake_protocol *THIS);
 char *yoohoo_remote_sysop_name(s_handshake_protocol *THIS);
 char *yoohoo_remote_system_name(s_handshake_protocol *THIS);
@@ -32,7 +32,7 @@ char *yoohoo_remote_location(s_handshake_protocol *THIS);
 char *yoohoo_remote_phone(s_handshake_protocol *THIS);
 char *yoohoo_remote_flags(s_handshake_protocol *THIS);
 char *yoohoo_remote_mailer(s_handshake_protocol *THIS);
-s_faddr *yoohoo_local_address(s_handshake_protocol *THIS);
+//s_faddr *yoohoo_local_address(s_handshake_protocol *THIS);
 char *yoohoo_local_password(s_handshake_protocol *THIS);
 
 s_handshake_protocol handshake_protocol_yoohoo = {
@@ -48,7 +48,7 @@ s_handshake_protocol handshake_protocol_yoohoo = {
 	yoohoo_incoming,
 	yoohoo_outgoing,
 	/* Section 2 */
-	yoohoo_remote_address,
+//	yoohoo_remote_address,
 	yoohoo_remote_password,
 	yoohoo_remote_sysop_name,
 	yoohoo_remote_system_name,
@@ -58,7 +58,7 @@ s_handshake_protocol handshake_protocol_yoohoo = {
 	NULL,
 	NULL,
 	/* Section 3 */
-	yoohoo_local_address,
+//	yoohoo_local_address,
 	yoohoo_local_password
 };
 
@@ -113,7 +113,7 @@ int yoohoo_incoming(s_handshake_protocol *THIS)
 	/*
 	 * Check password(s)
 	 */
-	if( session_addrs_check(remote_data->addrs, remote_data->anum,
+	if( session_addrs_check(state.remoteaddrs, state.n_remoteaddr,
 	                        remote_data->passwd, NULL, 0) )
 	{
 		rc = HRC_BAD_PASSWD;
@@ -123,8 +123,8 @@ int yoohoo_incoming(s_handshake_protocol *THIS)
 	else
 	{
 		/* Lock (create BSY) remote addresses */
-		if( session_addrs_lock(remote_data->addrs,
-		                       remote_data->anum) )
+		if( session_addrs_lock(state.remoteaddrs,
+		                       state.n_remoteaddr) )
 		{
 			log("all remote addresses are busy");
 			rc = HRC_BUSY;
@@ -135,7 +135,7 @@ int yoohoo_incoming(s_handshake_protocol *THIS)
 			 * Fill state.node with a first valid
 			 * address, try to lookup it in nodelist
 			 */
-			session_remote_lookup(remote_data->addrs, remote_data->anum);
+			session_remote_lookup(state.remoteaddrs, state.n_remoteaddr);
 			
 			if( session_check_speed() )
 				rc = HRC_LOW_SPEED;
@@ -180,7 +180,7 @@ int yoohoo_incoming(s_handshake_protocol *THIS)
 		/*
 		 * Create mail/files queue
 		 */
-		session_create_files_queue(remote_data->addrs, remote_data->anum);
+		session_create_files_queue(state.remoteaddrs, state.n_remoteaddr);
 		
 		/*
 		 * Set FREQ processor status
@@ -238,23 +238,23 @@ int yoohoo_outgoing(s_handshake_protocol *THIS)
 	/*
 	 * Make sure expected address was presented
 	 */
-	if( session_addrs_check_genuine(remote_data->addrs,
-	                                remote_data->anum,
+	if( session_addrs_check_genuine(state.remoteaddrs,
+	                                state.n_remoteaddr,
 	                                state.node.addr) )
 		return HRC_NO_ADDRESS;
 		
 	/*
 	 * Check password(s)
 	 */
-	if( session_addrs_check(remote_data->addrs, remote_data->anum,
+	if( session_addrs_check(state.remoteaddrs, state.n_remoteaddr,
 	                        remote_data->passwd, NULL, 0) )
 		return HRC_BAD_PASSWD;
 	
 	/*
 	 * Lock (create BSY) remote addresses
 	 */
-	(void)session_addrs_lock(remote_data->addrs,
-	                         remote_data->anum);
+	(void)session_addrs_lock(state.remoteaddrs,
+	                         state.n_remoteaddr);
 	
 	/*
 	 * Set protocol we will use ("options" ignored)
@@ -289,13 +289,12 @@ int yoohoo_outgoing(s_handshake_protocol *THIS)
 	/*
 	 * Create mail/files queue
 	 */
-	session_create_files_queue(remote_data->addrs,
-	                           remote_data->anum);
+	session_create_files_queue(state.remoteaddrs, state.n_remoteaddr);
 
 	return HRC_OK;
 }
 
-s_faddr *yoohoo_remote_address(s_handshake_protocol *THIS)
+/*s_faddr *yoohoo_remote_address(s_handshake_protocol *THIS)
 {
 	ASSERT(THIS);
 	ASSERT(THIS->remote_data);
@@ -304,7 +303,7 @@ s_faddr *yoohoo_remote_address(s_handshake_protocol *THIS)
 		return &((s_yoohoo_sysinfo *)THIS->remote_data)->addrs[0].addr;
 	
 	return NULL;
-}
+} */
 
 char *yoohoo_remote_password(s_handshake_protocol *THIS)
 {
@@ -339,7 +338,7 @@ char *yoohoo_remote_system_name(s_handshake_protocol *THIS)
 	return NULL;
 }
 
-s_faddr *yoohoo_local_address(s_handshake_protocol *THIS)
+/*s_faddr *yoohoo_local_address(s_handshake_protocol *THIS)
 {
 	ASSERT(THIS);
 	ASSERT(THIS->local_data);
@@ -348,7 +347,7 @@ s_faddr *yoohoo_local_address(s_handshake_protocol *THIS)
 		return &((s_yoohoo_sysinfo *)THIS->local_data)->addrs[0].addr;
 	
 	return NULL;
-}
+} */
 
 char *yoohoo_local_password(s_handshake_protocol *THIS)
 {

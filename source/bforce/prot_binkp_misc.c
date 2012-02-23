@@ -146,11 +146,9 @@ void binkp_log_sysinfo(s_binkp_sysinfo *binkp)
 	int i;
 	char abuf[BF_MAXADDRSTR+1];
 	
-	if( binkp->anum )
-		for( i = 0; i < binkp->anum; i++ )
-		{
-			log("   Address : %s", ftn_addrstr(abuf, binkp->addrs[i].addr));
-		}
+	for( i = 0; i < state.n_remoteaddr; i++ ) {
+		log("   Address : %s", ftn_addrstr(abuf, state.remoteaddrs[i].addr));
+	}
 	
 	if( *binkp->systname && *binkp->phone )
 		log("    System : %s (%s)",
@@ -220,25 +218,21 @@ void binkp_set_sysinfo(s_binkp_sysinfo *binkp, s_faddr *remote_addr, bool caller
 	const char *p_flags     = conf_string(cf_flags);
 	
 	/* free previously allocated memory */
-	if( binkp->addrs )
-		free(binkp->addrs);
+//	if( binkp->addrs )
+//		free(binkp->addrs);
 
 	memset(binkp, '\0', sizeof(s_binkp_sysinfo));
 	
 	/* Set best primary address */
-	if( remote_addr )
-	{
+	if(remote_addr) {
 		primary = session_get_bestaka(*remote_addr);
 		
 		/* Add primary address */
-		if( primary )
-			session_addrs_add(&binkp->addrs, &binkp->anum, *primary);
+		if (primary) session_addrs_add(&state.localaddrs, &state.n_localaddr, *primary);
 	}
 
 	/* Add other AKAs */
-	for( addr_ptr = conf_first(cf_address); addr_ptr;
-	     addr_ptr = conf_next(addr_ptr) )
-	{
+	for( addr_ptr = conf_first(cf_address); addr_ptr; addr_ptr = conf_next(addr_ptr) ) {
 		for( hide_ptr = conf_first(cf_hide_our_aka); hide_ptr;
 		     hide_ptr = conf_next(hide_ptr) )
 		{
@@ -247,12 +241,11 @@ void binkp_set_sysinfo(s_binkp_sysinfo *binkp, s_faddr *remote_addr, bool caller
 		}
 		
 		if( !hide_ptr && primary != &addr_ptr->d.falist.addr )
-			session_addrs_add(&binkp->addrs, &binkp->anum,
+			session_addrs_add(&state.localaddrs, &state.n_localaddr,
 					addr_ptr->d.falist.addr);
 	}
 	
-	if( binkp->anum == 0 )
-		log("warning: no addresses will be presented to remote");
+	if (state.n_localaddr == 0) log("warning: no addresses will be presented to remote");
 
 	/* session password */
 	if( caller )

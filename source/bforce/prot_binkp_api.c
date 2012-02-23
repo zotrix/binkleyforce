@@ -48,7 +48,7 @@ s_handshake_protocol handshake_protocol_binkp = {
 	binkp_incoming2,
 	binkp_outgoing2,
 	/* Section 2 */
-	binkp_remote_address,
+//	binkp_remote_address,
 	binkp_remote_password,
 	binkp_remote_sysop_name,
 	binkp_remote_system_name,
@@ -58,7 +58,7 @@ s_handshake_protocol handshake_protocol_binkp = {
 	binkp_remote_mailer,
 	NULL,
 	/* Section 3 */
-	binkp_local_address,
+//	binkp_local_address,
 	binkp_local_password
 };
 
@@ -113,9 +113,9 @@ int binkp_incoming2(s_handshake_protocol *THIS)
 	rc = binkp_incoming(local_data, remote_data);
 
 	binkp_log_sysinfo(remote_data);
-	if( remote_data->anum > 0 )
+	if( state.n_remoteaddr > 0 )
 	{
-		session_remote_lookup(remote_data->addrs, remote_data->anum);
+		session_remote_lookup(state.remoteaddrs, state.n_remoteaddr);
 		session_remote_log_status();
 		binkp_log_options(remote_data);
 	}
@@ -125,8 +125,8 @@ int binkp_incoming2(s_handshake_protocol *THIS)
 		/*
 		 * Create mail/files queue
 		 */
-		session_create_files_queue(remote_data->addrs,
-	    	                       remote_data->anum);
+		session_create_files_queue(state.remoteaddrs,
+	    	                       state.n_remoteaddr);
 		session_set_send_options();
 		session_set_inbound();
 		session_set_freqs_status();
@@ -155,9 +155,9 @@ int binkp_outgoing2(s_handshake_protocol *THIS)
 	rc = binkp_outgoing(local_data, remote_data);
 
 	binkp_log_sysinfo(remote_data);
-	if( remote_data->anum > 0 )
+	if( state.n_remoteaddr > 0 )
 	{
-		session_remote_lookup(remote_data->addrs, remote_data->anum);
+		session_remote_lookup(state.remoteaddrs, state.n_remoteaddr);
 		session_remote_log_status();
 		binkp_log_options(remote_data);
 	}
@@ -167,8 +167,7 @@ int binkp_outgoing2(s_handshake_protocol *THIS)
 		/*
 		 * Create mail/files queue
 		 */
-		session_create_files_queue(remote_data->addrs,
-	    	                       remote_data->anum);
+		session_create_files_queue(state.remoteaddrs, state.n_remoteaddr);
 		session_set_send_options();
 		session_set_inbound();
 	}
@@ -176,7 +175,7 @@ int binkp_outgoing2(s_handshake_protocol *THIS)
 	return rc;
 }
 
-s_faddr *binkp_remote_address(s_handshake_protocol *THIS)
+/*s_faddr *binkp_remote_address(s_handshake_protocol *THIS)
 {
 	ASSERT(THIS);
 	ASSERT(THIS->remote_data);
@@ -185,7 +184,7 @@ s_faddr *binkp_remote_address(s_handshake_protocol *THIS)
 		return &((s_binkp_sysinfo *)THIS->remote_data)->addrs[0].addr;
 
 	return NULL;
-}
+} */
 
 char *binkp_remote_password(s_handshake_protocol *THIS)
 {
@@ -264,7 +263,7 @@ char *binkp_remote_mailer(s_handshake_protocol *THIS)
 	return NULL;
 }
 
-s_faddr *binkp_local_address(s_handshake_protocol *THIS)
+/*s_faddr *binkp_local_address(s_handshake_protocol *THIS)
 {
 	ASSERT(THIS);
 	ASSERT(THIS->local_data);
@@ -273,7 +272,7 @@ s_faddr *binkp_local_address(s_handshake_protocol *THIS)
 		return &((s_binkp_sysinfo *)THIS->local_data)->addrs[0].addr;
 
 	return NULL;
-}
+} */
 
 char *binkp_local_password(s_handshake_protocol *THIS)
 {

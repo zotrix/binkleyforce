@@ -58,7 +58,7 @@ static void zmodem_add_empty_packet(s_protinfo *pi)
 	memset(&pkt, '\0', sizeof(s_packet));
 	
 	pkt.dest = state.node.addr;
-	pkt.orig = *state.handshake->remote_address(state.handshake);
+	if (session_1remote_address()) pkt.orig = *session_1remote_address();
 	
 	if( pkt_createpacket(p_tmpname, &pkt) )
 	{

@@ -116,10 +116,10 @@ char *emsi_createdat(s_emsi *emsi)
 		
 		/* our addresses, akas, etc :) */
 		tmp = add_char(tmp, '{');
-		for( i = 0; i < emsi->anum; i++ )
+		for( i = 0; i < state.n_localaddr; i++ )
 		{
 			if( i ) tmp = add_char(tmp, ' ');
-			tmp = add_str(tmp, ftn_addrstr(abuf, emsi->addrs[i].addr));
+			tmp = add_str(tmp, ftn_addrstr(abuf, state.localaddrs[i].addr));
 		}
 		tmp = add_char(tmp, '}');
 		
@@ -146,27 +146,27 @@ char *emsi_createdat(s_emsi *emsi)
 		if( emsi->linkcodes.FNC ) tmp = add_str(tmp, "FNC,");
 		if( emsi->linkcodes.RMA ) tmp = add_str(tmp, "RMA,");
 		if( emsi->linkcodes.RH1 ) tmp = add_str(tmp, "RH1,");
-		for( i = 0; i < emsi->anum; i++ )
+		for( i = 0; i < state.n_localaddr; i++ )
 		{
-			if( emsi->addrs[i].flags & EMSI_FLAG_PU )
+			if( state.localaddrs[i].flags & EMSI_FLAG_PU )
 				tmp = add_nflag(tmp, "PU", i);
-			if( emsi->addrs[i].flags & EMSI_FLAG_HA )
+			if( state.localaddrs[i].flags & EMSI_FLAG_HA )
 				tmp = add_nflag(tmp, "HA", i);
-			if( emsi->addrs[i].flags & EMSI_FLAG_PM )
+			if( state.localaddrs[i].flags & EMSI_FLAG_PM )
 				tmp = add_nflag(tmp, "PM", i);
-			if( emsi->addrs[i].flags & EMSI_FLAG_NF )
+			if( state.localaddrs[i].flags & EMSI_FLAG_NF )
 				tmp = add_nflag(tmp, "NF", i);
-			if( emsi->addrs[i].flags & EMSI_FLAG_NX )
+			if( state.localaddrs[i].flags & EMSI_FLAG_NX )
 				tmp = add_nflag(tmp, "NX", i);
-			if( emsi->addrs[i].flags & EMSI_FLAG_NR )
+			if( state.localaddrs[i].flags & EMSI_FLAG_NR )
 				tmp = add_nflag(tmp, "NR", i);
-			if( emsi->addrs[i].flags & EMSI_FLAG_HN )
+			if( state.localaddrs[i].flags & EMSI_FLAG_HN )
 				tmp = add_nflag(tmp, "HN", i);
-			if( emsi->addrs[i].flags & EMSI_FLAG_HX )
+			if( state.localaddrs[i].flags & EMSI_FLAG_HX )
 				tmp = add_nflag(tmp, "HX", i);
-			if( emsi->addrs[i].flags & EMSI_FLAG_HF )
+			if( state.localaddrs[i].flags & EMSI_FLAG_HF )
 				tmp = add_nflag(tmp, "HF", i);
-			if( emsi->addrs[i].flags & EMSI_FLAG_HR )
+			if( state.localaddrs[i].flags & EMSI_FLAG_HR )
 				tmp = add_nflag(tmp, "HR", i);
 		}
 		if( tmp[strlen(tmp+1)] == ',' )
@@ -468,10 +468,10 @@ int emsi_parsedat(char *emsi_dat, s_emsi *emsi)
 				if( ftn_addrparse(&addr, p, FALSE) )
 					log("unparsable address \"%s\" skipped", p);
 				else
-					session_addrs_add(&emsi->addrs, &emsi->anum, addr);
+					session_addrs_add(&state.remoteaddrs, &state.n_remoteaddr, addr);
 			}
 			
-			if( emsi->anum == 0 )
+			if( state.n_remoteaddr == 0 )
 			{
 				log("parsable addresses not found");
 				return(1);
@@ -502,24 +502,24 @@ int emsi_parsedat(char *emsi_dat, s_emsi *emsi)
 				else if( !strcmp(p, "RMA") ) emsi->linkcodes.RMA = 1;
 				else if( !strcmp(p, "RH1") ) emsi->linkcodes.RH1 = 1;
 				/* check EMSI-II address dependend flags */
-				else if( ((i=nflgcmp(p, "HA")) >= 0) && (i < emsi->anum) )
-					emsi->addrs[i].flags |= EMSI_FLAG_HA;
-				else if( ((i=nflgcmp(p, "PM")) >= 0) && (i < emsi->anum) )
-					emsi->addrs[i].flags |= EMSI_FLAG_PM;
-				else if( ((i=nflgcmp(p, "NF")) >= 0) && (i < emsi->anum) )
-					emsi->addrs[i].flags |= EMSI_FLAG_NF;
-				else if( ((i=nflgcmp(p, "NX")) >= 0) && (i < emsi->anum) )
-					emsi->addrs[i].flags |= EMSI_FLAG_NX;
-				else if( ((i=nflgcmp(p, "NR")) >= 0) && (i < emsi->anum) )
-					emsi->addrs[i].flags |= EMSI_FLAG_NR;
-				else if( ((i=nflgcmp(p, "HN")) >= 0) && (i < emsi->anum) )
-					emsi->addrs[i].flags |= EMSI_FLAG_HN;
-				else if( ((i=nflgcmp(p, "HX")) >= 0) && (i < emsi->anum) )
-					emsi->addrs[i].flags |= EMSI_FLAG_HX;
-				else if( ((i=nflgcmp(p, "HF")) >= 0) && (i < emsi->anum) )
-					emsi->addrs[i].flags |= EMSI_FLAG_HF;
-				else if( ((i=nflgcmp(p, "HR")) >= 0) && (i < emsi->anum) ) 
-					emsi->addrs[i].flags |= EMSI_FLAG_HR;
+				else if( ((i=nflgcmp(p, "HA")) >= 0) && (i < state.n_remoteaddr) )
+					state.remoteaddrs[i].flags |= EMSI_FLAG_HA;
+				else if( ((i=nflgcmp(p, "PM")) >= 0) && (i < state.n_remoteaddr) )
+					state.remoteaddrs[i].flags |= EMSI_FLAG_PM;
+				else if( ((i=nflgcmp(p, "NF")) >= 0) && (i < state.n_remoteaddr) )
+					state.remoteaddrs[i].flags |= EMSI_FLAG_NF;
+				else if( ((i=nflgcmp(p, "NX")) >= 0) && (i < state.n_remoteaddr) )
+					state.remoteaddrs[i].flags |= EMSI_FLAG_NX;
+				else if( ((i=nflgcmp(p, "NR")) >= 0) && (i < state.n_remoteaddr) )
+					state.remoteaddrs[i].flags |= EMSI_FLAG_NR;
+				else if( ((i=nflgcmp(p, "HN")) >= 0) && (i < state.n_remoteaddr) )
+					state.remoteaddrs[i].flags |= EMSI_FLAG_HN;
+				else if( ((i=nflgcmp(p, "HX")) >= 0) && (i < state.n_remoteaddr) )
+					state.remoteaddrs[i].flags |= EMSI_FLAG_HX;
+				else if( ((i=nflgcmp(p, "HF")) >= 0) && (i < state.n_remoteaddr) )
+					state.remoteaddrs[i].flags |= EMSI_FLAG_HF;
+				else if( ((i=nflgcmp(p, "HR")) >= 0) && (i < state.n_remoteaddr) ) 
+					state.remoteaddrs[i].flags |= EMSI_FLAG_HR;
 			}
 			
 			/* compatibility codes */
@@ -670,14 +670,14 @@ void emsi_logdat(s_emsi *emsi)
 
 	if( emsi->have_emsi )
 	{
-		if( emsi->anum )
+		if( state.n_remoteaddr )
 		{
-			for( i = 0; i < emsi->anum; i++ )
+			for( i = 0; i < state.n_remoteaddr; i++ )
 			{
-				if( emsi->addrs[i].busy )
-					log("   Address : %s (Busy)", ftn_addrstr(abuf, emsi->addrs[i].addr));
+				if( state.remoteaddrs[i].busy )
+					log("   Address : %s (Busy)", ftn_addrstr(abuf, state.remoteaddrs[i].addr));
 				else
-					log("   Address : %s", ftn_addrstr(abuf, emsi->addrs[i].addr));
+					log("   Address : %s", ftn_addrstr(abuf, state.remoteaddrs[i].addr));
 			}
 		}
 		else

@@ -41,12 +41,13 @@ const char *Protocols[] =
  * 	Zero value on success and non-zero if nothing to send
  */
 
-static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_filehint *hint)
+static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 {
         log("prot_get_next_file"); // %s %d", hint->fn, hint->sz);
 	s_filelist *ptrl = NULL;
 	s_filelist *best = NULL;
 	s_fsqueue *q = &state.queue;
+        s_filehint *hint = NULL; // M_GET hinting does not work good here as it spec net_name and it is unknown here (especially for PKTs)
 
 	*dest = NULL;
 
@@ -116,24 +117,48 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_filehint *hin
 	/*log("netspool next file");*/
 	if(state.netspool.state == NS_NOTINIT) {
 	    /*log("new netspool connection");*/
-	    char password[100];
-	    char address[300];
+#define ADDRBUF 3000
+#define SMALLBUF 128
+	    char password[SMALLBUF];
+	    char address[SMALLBUF];
+	    char addresses[ADDRBUF];
+	    int i, pos, alen;
 	    char *host = conf_string(cf_netspool_host);
 	    char *port = conf_string(cf_netspool_port);
 	    if(host==NULL) {
 		//log("netspool is not configured");
 	        state.netspool.state = NS_UNCONF;
 	    } else {
-		snprintf(address, 299, state.node.addr.point? "%d:%d/%d.%d": "%d:%d/%d",
-                        state.node.addr.zone, state.node.addr.net,
-                        state.node.addr.node, state.node.addr.point);
+	        if (state.n_remoteaddr==0) {
+	            log("cannot start netspool: list of remote addresses has zero length");
+	            return -1;
+	        }
+	        for(i=0, pos=0; i<state.n_remoteaddr; i++) {
+	            alen=snprintf(address, SMALLBUF, state.remoteaddrs[i].addr.point? "%d:%d/%d.%d": "%d:%d/%d",
+                        state.remoteaddrs[i].addr.zone, state.remoteaddrs[i].addr.net,
+                        state.remoteaddrs[i].addr.node, state.remoteaddrs[i].addr.point);
+	            if (!state.remoteaddrs[i].good) {
+	                log("ignoring addr %s", address);
+	                continue;
+	            }
+	            if (pos+alen+1 > ADDRBUF-1) { // space for zero length string as end marker
+	                log("no buffer space for address %s", address);
+	                break;
+	            }
+	            log("add address %s", address);
+	            memcpy (addresses+pos, address, alen);
+	            pos += alen;
+	            addresses[pos++] = 0;
+	        }
+	        addresses[pos++] = 0;
+
 		if(state.protected) {
-		    session_get_password(state.node.addr, password, 100);
+		    session_get_password(state.remoteaddrs[0].addr, password, SMALLBUF);
 		} else {
 		    password[0] = 0;
 		}
-		log("netspool start %s %s %s (pwd)", host, port, address);
-		netspool_start(&state.netspool, host, port, address, password);
+		log("netspool start %s %s", host, port);
+		netspool_start(&state.netspool, host, port, addresses, password);
 	    }
 	}
 
@@ -257,7 +282,7 @@ int p_tx_fopen(s_protinfo *pi, s_filehint *hint)
 	}
 
 get_next_file:
-	if( prot_get_next_file(&ptrl, pi, hint) ) {
+	if( prot_get_next_file(&ptrl, pi) ) {
 	    log("no next file");
 	    return 1;
         }

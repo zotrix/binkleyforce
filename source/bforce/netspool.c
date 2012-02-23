@@ -73,7 +73,7 @@ int sendstr(int s, const char *buf) {
 
 
 
-void netspool_start(s_netspool_state *state, const char *host, const char *port, const char *address, const char *password)
+void netspool_start(s_netspool_state *state, const char *host, const char *port, const char *addresses, const char *password)
 {
     int s, r;
     struct addrinfo hint;
@@ -126,9 +126,12 @@ void netspool_start(s_netspool_state *state, const char *host, const char *port,
     if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
     //puts(strbuf); -- hello from remote
 
-    snprintf(strbuf, STRBUF, "ADDRESS %s", address);
-    r = sendstr(s, strbuf);
-    if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
+    while (*addresses) { // stop when zero length string under pointer
+        snprintf(strbuf, STRBUF, "ADDRESS %s", addresses);
+        r = sendstr(s, strbuf);
+        if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
+        addresses += strlen(addresses)+1; // go to next string
+    }
 
     snprintf(strbuf, STRBUF, "PASSWORD %s", password);
     r = sendstr(s, strbuf);
