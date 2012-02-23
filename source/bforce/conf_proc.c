@@ -180,6 +180,7 @@ s_conf_entry bforce_config[BFORCE_NUMBER_OF_KEYWORDS+1] = {
         CONF_KEY(netspool_host,			CT_STRING),
         CONF_KEY(netspool_port,			CT_STRING),
 #endif
+        CONF_KEY(fidodnszone,			CT_STRING),
 
 	CONF_END()
 };

@@ -275,6 +275,7 @@ typedef enum {
         cf_netspool_host,
         cf_netspool_port,
 #endif
+        cf_fidodnszone,
 	BFORCE_NUMBER_OF_KEYWORDS
 } bforce_config_keyword;
 

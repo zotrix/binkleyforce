@@ -758,6 +758,21 @@ int call_system(s_faddr addr, const s_bforce_opts *opts)
 				state.override.sIpaddr, sizeof(state.node.host));
 	}
 	
+	if( call_mayuse & CALL_TCPIP_ANY && !tcpip_isgood_host(state.node.host) ) {
+	    char *fidodnszone = conf_string(cf_fidodnszone);
+	    if (fidodnszone) {
+	        if (addr.point) {
+	            snprintf(state.node.host, BNI_MAXHOST, "p%d.f%d.n%d.z%d.%s",
+	                addr.point, addr.node, addr.net, addr.zone, fidodnszone);
+	        }
+	        else {
+	            snprintf(state.node.host, BNI_MAXHOST, "f%d.n%d.z%d.%s",
+	                addr.node, addr.net, addr.zone, fidodnszone);
+	        }
+	        log("use fido DNS zone: %s", state.node.host);
+	    }
+	}
+
 	if( call_mayuse & CALL_TCPIP_ANY && !tcpip_isgood_host(state.node.host) )
 	{
 		call_mayuse &= ~CALL_TCPIP_ANY;
