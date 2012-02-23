@@ -210,10 +210,10 @@ int tx_zmodem(s_protinfo *pi, bool caller)
 			
 		case ZTX_NEXTFILE:
 			DEB((D_PROT, "tx_zmodem: entering state ZTX_NEXTFILE"));
-			if( pi->send && pi->send->fp )
-				p_tx_fclose(pi);
+			if (pi->send) p_tx_fclose(pi);
 			txtries = 0;
 			txstate = p_tx_fopen(pi, NULL) ? ZTX_FIN : ZTX_FINFO;
+			log("nextfile next state: %d", txstate);
 			break;
 
 		case ZTX_FINFO:
@@ -556,7 +556,7 @@ int tx_zmodem(s_protinfo *pi, bool caller)
 			case ZFIN:
 				/* BUG!BUG!BUG!BUG!BUG!BUG!BUG!BUG!BUG! */
 				/* BUG!BUG!BUG!BUG!BUG!BUG!BUG!BUG!BUG! */
-				/* BUG!BUG!BUG!BUG!BUG!BUG!BUG!BUG!BUG! */
+				log(" BUG!BUG!BUG!BUG!BUG!BUG!BUG!BUG!BUG! ");
 				if( txstate == ZTX_FINACK )
 				{
 					if( PUTSTR("OO") == 0 )
@@ -590,7 +590,7 @@ int tx_zmodem(s_protinfo *pi, bool caller)
 					
 					/* Check pos */
 					if( (Z_Rxpos || txstate != ZTX_FINFOACK)
-					 && fseek(pi->send->fp, Z_Rxpos, 0) )
+					 && p_tx_rewind(pi, Z_Rxpos) )
 					{
 						logerr("can't send file from requested position");
 						/* Open next file for send */
@@ -641,7 +641,7 @@ int tx_zmodem(s_protinfo *pi, bool caller)
 			case ZCRC:
 				if( txstate == ZTX_FINFOACK )
 				{
-					/* Send file's CRC-32 */
+					log(" Send file's CRC-32 ");
 					crc32 = 0xFFFFFFFFL;
 					
 					while( ((c = getc(pi->send->fp)) != EOF) && --Z_Rxpos )
@@ -717,8 +717,7 @@ exit:
 	
 	setalarm(0);
 	
-	if( pi->send && pi->send->fp )
-		p_tx_fclose(pi);
+	if (pi->send) p_tx_fclose(pi);
 	
 	if( txbuf )
 		free(txbuf);
