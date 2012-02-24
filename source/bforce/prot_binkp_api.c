@@ -78,21 +78,27 @@ void binkp_init(s_handshake_protocol *THIS)
 
 void binkp_deinit(s_handshake_protocol *THIS)
 {
-	ASSERT(THIS);
-	ASSERT(THIS->remote_data);
-	ASSERT(THIS->local_data);
+        log("binkp_deinit");
+	if (THIS==NULL) {
+	    log("THIS==NULL");
+	    return;
+	}
 
 	if( THIS->remote_data )
 	{
 		memset(THIS->remote_data, '\0', sizeof(s_binkp_sysinfo));
 		free(THIS->remote_data);
+		THIS->remote_data = NULL;
 	}
 
 	if( THIS->local_data )
 	{
 		memset(THIS->local_data, '\0', sizeof(s_binkp_sysinfo));
 		free(THIS->local_data);
+		THIS->local_data = NULL;
 	}
+        log("binkp_deinit end");
+
 }
 
 int binkp_incoming2(s_handshake_protocol *THIS)

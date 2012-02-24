@@ -349,7 +349,7 @@ get_next_file:
 	if( !ptrl ) {
 	    /* send file received through netspool */
 	pi->send->fp          = 0;
-	pi->send->local_name  = "NETSPOOL";
+	pi->send->local_name  = (char*)xstrcpy("NETSPOOL");
 	pi->send->type        = out_filetype(state.netspool.filename);
 	pi->send->net_name    = recode_file_out(p_convfilename(state.netspool.filename, pi->send->type));
 	pi->send->fname       = NULL;
@@ -749,7 +749,9 @@ static int p_move2inbound(s_protinfo *pi)
 		{
 			log("recv: cannot get unique name for \"%s\"",
 				pi->recv->local_name);
+			log("free realname");
 			free(realname);
+			log("freed");
 			return 1;
 		}
 
@@ -796,10 +798,16 @@ static int p_move2inbound(s_protinfo *pi)
 				destname);
 	}
 	
-	if( realname )
+	if( realname ) {
+	        log("free realname");
 		free(realname);
-	if( uniqname )
+		log("freed");
+	}
+	if( uniqname ) {
+	        log("free uniqname");
 		free(uniqname);
+		log("freed");
+	}
 	
 	return rc ? 1 : 0;
 }
@@ -984,8 +992,9 @@ int p_rx_fopen(s_protinfo *pi, char *fn, size_t sz, time_t tm, mode_t mode)
 				pi->recv->status = FSTAT_SKIPPED;
 			}
 		}
-	
+	        log("free fname");
 		free(fname); fname = NULL;
+		log("freed");
 		
 		if( pi->recv->status == FSTAT_SKIPPED )
 			return 2;
@@ -1013,8 +1022,10 @@ int p_rx_fopen(s_protinfo *pi, char *fn, size_t sz, time_t tm, mode_t mode)
 				else	
 					pi->recv->status = FSTAT_REFUSED;
 				
+				log("free pi->recv->fname");
 				free(pi->recv->fname);
 				pi->recv->fname = NULL;
+				log("freed");
 				
 				return pi->recv->status == FSTAT_SKIPPED ? 2 : 1;
 			}
@@ -1636,6 +1647,7 @@ char *prot_unique_name(char *dirname, char *fname, int type)
  */
 void deinit_finfo(s_finfo *fi)
 {
+        log("deinit_finfo");
 	if( fi->fp )
 		fclose(fi->fp);
 	
@@ -1647,6 +1659,7 @@ void deinit_finfo(s_finfo *fi)
 		free(fi->fname);
 	
 	memset(fi, '\0', sizeof(s_finfo));
+        log("deinit_finfo end");
 }
 
 /*****************************************************************************
@@ -1764,6 +1777,7 @@ void init_protinfo(s_protinfo *pi, bool caller)
 void deinit_protinfo(s_protinfo *pi)
 {
 	int i;
+	log("deinit_protinfo");
 	
 	for( i = 0; i < pi->n_sentfiles; i++ )
 		deinit_finfo(&pi->sentfiles[i]);
@@ -1779,4 +1793,5 @@ void deinit_protinfo(s_protinfo *pi)
 		free(pi->rcvdfiles);
 	
 	memset(pi, '\0', sizeof(s_protinfo));
+	log("deinit_protinfo end");
 }

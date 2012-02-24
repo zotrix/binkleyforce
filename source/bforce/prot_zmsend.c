@@ -719,8 +719,11 @@ exit:
 	
 	if (pi->send) p_tx_fclose(pi);
 	
-	if( txbuf )
+	if( txbuf ) {
 		free(txbuf);
+		txbuf = NULL;
+	}
+	
 	
 	return(rc);
 }
