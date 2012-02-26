@@ -1,8 +1,7 @@
 === 2012-02 ===
 
 Netspool support
-Netspool forcibly disables NR mode in binkp
-(due to NR mode requires access to file on local filesystem)
+24554 protocol remake
 
 === 2011-12-25 ===
 

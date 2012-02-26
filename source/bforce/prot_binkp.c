@@ -2,6 +2,7 @@
  *	binkleyforce -- unix FTN mailer project
  *	
  *	Copyright (c) 1998-2000 Alexander Belkin, 2:5020/1398.11
+ *	Copyright (c) 2012 Sergey Dorofeev, 2:5020/12000
  *	
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
