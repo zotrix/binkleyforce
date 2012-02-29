@@ -39,12 +39,23 @@
 int binkp_parsfinfo(const char *str, s_bpfinfo *fi, bool with_offset)
 {
     int r;
+    char *chkslash;
     if( strlen(str)>PATH_MAX ) {
         log("too long string, overflow may occur");
         return -1;
     }
     log("info to parse: %s", str);
     r = sscanf(str, with_offset? "%s %d %d %d": "%s %d %d", &fi->fn, &fi->sz, &fi->tm, &fi->offs);
+    chkslash = fi->fn;
+    while (1) {
+        chkslash = strchr(chkslash, '/');
+        if (chkslash) {
+            *chkslash = '_';
+        }
+        else {
+            break;
+        }
+    }
     if (r==(with_offset? 4: 3)) {
         return 0;
     }
