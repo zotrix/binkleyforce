@@ -17,12 +17,12 @@
 #include "outbound.h"
 
 /* File transfer protocols return codes */
-#define PRC_NOERROR         0       /* No comments :) */
-#define PRC_ERROR           1       /* I/O error occured while snd./rcv. */
-#define PRC_REMOTEABORTED   2       /* "ABORT" initiated by remote */
-#define PRC_LOCALABORTED    3       /* We got SIGINT/SIGTERM? */
-#define PRC_CPSTOOLOW       4       /* Cps was so low.. :( */
-#define PRC_STOPTIME        5       /* Aborted due to the time limits */
+#define PRC_NOERROR         0        /* Successful session */
+#define PRC_ERROR           20       /* I/O error occured while snd./rcv. */
+#define PRC_REMOTEABORTED   21       /* "ABORT" initiated by remote */
+#define PRC_LOCALABORTED    22       /* We got SIGINT/SIGTERM? */
+#define PRC_CPSTOOLOW       23       /* Cps was so low.. :( */
+#define PRC_STOPTIME        24       /* Aborted due to the time limits */
 
 /* Send/Recv file status values */
 #define FSTAT_PROCESS  1

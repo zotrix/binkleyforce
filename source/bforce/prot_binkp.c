@@ -57,6 +57,7 @@ typedef struct {
     e_file_receive_status frs;
     int emptyloop;
     bool continuesend;
+    int rc;
 } s_binkp_state;
 
 int binkp_getforsend(s_binkp_state *bstate, char *buf, int *block_type, unsigned short *block_length);
@@ -68,8 +69,7 @@ int binkp_loop(s_binkp_state *bstate) {
     unsigned char readbuf[BINKP_HEADER+BINKP_MAXBLOCK+1];
     unsigned char writebuf[BINKP_HEADER+BINKP_MAXBLOCK+1];
 
-    int rc = HRC_OK;
-
+    bstate->rc = PRC_NOERROR;
     bstate->phase = 0;
     bstate->subphase = 0;
     bstate->extracmd[0] = -1;
@@ -133,7 +133,7 @@ int binkp_loop(s_binkp_state *bstate) {
                     writebuf[0] = (block_length>>8)&0x7f;
                 } else {
                     log("block for sending has invalid type, aborting");
-                    return -1;
+                    return PRC_ERROR;
                 }
                 writebuf[1] = block_length&0xff;
             }
@@ -146,7 +146,7 @@ int binkp_loop(s_binkp_state *bstate) {
             }
             if (m<0 || m>3) {
                 log("getforsend error");
-                return -1;
+                return PRC_ERROR;
             }
         }
 
@@ -182,13 +182,13 @@ int binkp_loop(s_binkp_state *bstate) {
           n = tty_select(want_read?&canread:NULL, have_to_write?&canwrite:NULL, timeout);
           if( n<0 ) {
               log("binkp error on tty_select");
-              return -1;
+              return PRC_ERROR;
           }
         }
         else {
             log("empty loop %d", ++bstate->emptyloop);
             if (bstate->emptyloop==10) {
-                return -1;
+                return PRC_ERROR;
             }
         }
 
@@ -196,11 +196,11 @@ int binkp_loop(s_binkp_state *bstate) {
             n = tty_read(readbuf+read_pos, want_read);
             if( n<0 ) {
                 log("binkp: tty read error");
-                return -1;
+                return PRC_ERROR;
             } 
             else if (n==0) {
                 log("read: remote socket shutdown");
-                return -1;
+                return PRC_REMOTEABORTED;
             }
             want_read -= n;
             read_pos += n;
@@ -234,11 +234,11 @@ int binkp_loop(s_binkp_state *bstate) {
                 else if (m==3) {
                     log("aborting session");
                     bstate->complete = true;
-                    rc = HRC_OTHER_ERR;
+                    //rc = HRC_OTHER_ERR;
                 }
                 else {
                     log("doreceiveblock error");
-                    return -1;
+                    return PRC_ERROR;
                 }
         }
 
@@ -247,18 +247,18 @@ int binkp_loop(s_binkp_state *bstate) {
             n = tty_write(writebuf+write_pos, have_to_write);
             if( n<0 ) {
                 log("binkp: tty write error");
-                return -1;
+                return PRC_ERROR;
             } 
             else if (n==0) {
                 log("write: remote socket shutdown");
-                return -1;
+                return PRC_REMOTEABORTED;
             }
             //log("%d bytes sent", n);
             write_pos += n;
             have_to_write -= n;
         }
     }
-    return rc;
+    return bstate->rc;
 }
 
 int binkp_outgoing(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data)
@@ -614,7 +614,8 @@ case 4:
 
 }
 
-#define PROTO_ERROR(msg) log("error: %s", msg); bstate->extracmd[0] = BPMSG_ERR; strcpy(bstate->extracmd+1, msg); bstate->extraislast = true; return -1;
+#define PROTO_ERROR(msg) { log("error: %s", msg); bstate->rc = PRC_LOCALABORTED; \
+bstate->extracmd[0] = BPMSG_ERR; strcpy(bstate->extracmd+1, msg); bstate->extraislast = true; return 1; }
 
 
 int binkp_doreceiveblock(s_binkp_state *bstate, char *buf, int block_type, unsigned short block_length)
@@ -897,9 +898,11 @@ check_that_all_files_are_confirmed:
 
 case BPMSG_ERR:              /* Misc errors */
             log("remote error: %s", buf+1);
+            bstate->rc = PRC_REMOTEABORTED;
             return 3;
 case BPMSG_BSY:              /* All AKAs are busy */
             log("remote busy: %s", buf+1);
+            bstate->rc = PRC_REMOTEABORTED;
             return 3;
 
 case BPMSG_GET:              /* Get a file from offset */
