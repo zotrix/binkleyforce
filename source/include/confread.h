@@ -319,7 +319,7 @@ typedef struct conf_entry {
 		CT_STRING,
 		CT_TRANSLATE,
 		CT_TRIES,
-		CT_DEBLEVEL,
+//		CT_DEBLEVEL,
 		CT_FILEBOX
 	} type;
 	s_cval_entry *data;

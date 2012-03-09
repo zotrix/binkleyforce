@@ -56,7 +56,7 @@ s_handshake_protocol handshake_protocol_binkp = {
 	binkp_remote_phone,
 	binkp_remote_flags,
 	binkp_remote_mailer,
-	NULL,
+	binkp_remote_traffic,
 	/* Section 3 */
 //	binkp_local_address,
 	binkp_local_password
@@ -78,7 +78,7 @@ void binkp_init(s_handshake_protocol *THIS)
 
 void binkp_deinit(s_handshake_protocol *THIS)
 {
-        log("binkp_deinit");
+        DEB((D_FREE, "binkp_deinit"));
 	if (THIS==NULL) {
 	    log("THIS==NULL");
 	    return;
@@ -97,7 +97,7 @@ void binkp_deinit(s_handshake_protocol *THIS)
 		free(THIS->local_data);
 		THIS->local_data = NULL;
 	}
-        log("binkp_deinit end");
+        DEB((D_FREE, "binkp_deinit end"));
 
 }
 
@@ -291,3 +291,19 @@ char *binkp_local_password(s_handshake_protocol *THIS)
 	return NULL;
 }
 
+int binkp_remote_traffic(s_handshake_protocol *THIS, s_traffic *dest)
+{
+        ASSERT(THIS);
+        ASSERT(THIS->remote_data);
+        ASSERT(dest);
+        
+        memset(dest, '\0', sizeof(s_traffic));
+
+        if (((s_binkp_sysinfo *)THIS->remote_data)->has_TRF) {
+            dest->netmail_size = ((s_binkp_sysinfo *)THIS->remote_data)->TRF_PKT;
+            dest->arcmail_size = 0;
+            dest->files_size = ((s_binkp_sysinfo *)THIS->remote_data)->TRF_other;
+            return 0;
+        }
+        return -1;
+}

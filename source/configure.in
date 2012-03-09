@@ -3,7 +3,7 @@ dnl
 dnl $Id$
 dnl
 #AC_INIT(bforce/bforce.c)
-AC_INIT([bforce],[0.22.9],[e.kozhuhovskiy@gmail.com])
+AC_INIT([bforce],[0.24],[sergey@fidoman.ru])
 AC_CONFIG_HEADER(include/config.h)
 AC_CANONICAL_SYSTEM
 dnl # Minimum Autoconf version required.

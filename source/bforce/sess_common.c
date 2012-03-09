@@ -164,7 +164,7 @@ void init_state(s_state *pstate)
 
 void deinit_state(s_state *pstate)
 {
-        log("deinit_state begin");
+        DEB((D_FREE, "deinit_state begin"));
 	if (pstate->linename) free(pstate->linename);
 	if (pstate->cidstr) free(pstate->cidstr);
 	if (pstate->peername) free(pstate->peername);
@@ -185,7 +185,7 @@ void deinit_state(s_state *pstate)
 	memset(pstate, '\0', sizeof(s_state));
 
 	pstate->session_rc = -1;
-        log("deinit_state end");
+        DEB((D_FREE, "deinit_state end"));
 }
 
 s_faddr *session_1remote_address()

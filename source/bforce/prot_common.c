@@ -43,7 +43,7 @@ const char *Protocols[] =
 
 static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 {
-        log("prot_get_next_file"); // %s %d", hint->fn, hint->sz);
+        DEB((D_OUTBOUND, "prot_get_next_file")); // %s %d", hint->fn, hint->sz);
 	s_filelist *ptrl = NULL;
 	s_filelist *best = NULL;
 	s_fsqueue *q = &state.queue;
@@ -53,7 +53,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 
 	/* local queue */
 	for( ptrl = q->fslist; ptrl; ptrl = ptrl->next ) {
-	        //log("scan %s", ptrl->fname);
+	        //DEB((D_OUTBOUND, "scan %s", ptrl->fname));
 	        if (hint) if (strcmp(hint->fn, ptrl->fname) !=0 || hint->sz != ptrl->size) continue;
 		if( ptrl->status == STATUS_WILLSEND )
 		{
@@ -91,7 +91,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 				best = ptrl;
 		}
 	}
-	//log("scan1 done");
+	//DEB((D_OUTBOUND, log("scan1 done");
 	
 	if( best )
 	{
@@ -107,16 +107,16 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 			return 0;
 		}
 	}
-	//log("scan2 done");
+	//DEB((D_OUTBOUND, log("scan2 done");
 	
 	/* network queue */
 #ifdef NETSPOOL
 
         if (hint) return 1; // cannot choose
 
-	/*log("netspool next file");*/
+	/*DEB((D_OUTBOUND, log("netspool next file");*/
 	if(state.netspool.state == NS_NOTINIT) {
-	    /*log("new netspool connection");*/
+	    /*DEB((D_OUTBOUND, log("new netspool connection");*/
 #define ADDRBUF 3000
 #define SMALLBUF 128
 	    char password[SMALLBUF];
@@ -126,7 +126,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	    char *host = conf_string(cf_netspool_host);
 	    char *port = conf_string(cf_netspool_port);
 	    if(host==NULL) {
-		//log("netspool is not configured");
+		//DEB((D_OUTBOUND, log("netspool is not configured");
 	        state.netspool.state = NS_UNCONF;
 	    } else {
 	        if (state.n_remoteaddr==0) {
@@ -145,7 +145,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	                log("no buffer space for address %s", address);
 	                break;
 	            }
-	            log("add address %s", address);
+	            DEB((D_OUTBOUND, "add address %s", address));
 	            memcpy (addresses+pos, address, alen);
 	            pos += alen;
 	            addresses[pos++] = 0;
@@ -163,26 +163,26 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	}
 
 	if(state.netspool.state == NS_READY) {
-	    /*log("netspool request");*/
+	    /*DEB((D_OUTBOUND, log("netspool request");*/
 	    netspool_query(&state.netspool, "ALL");
 	}
 
 	if(state.netspool.state == NS_RECEIVING) {
-	    //log("netspool begin receive");
+	    //DEB((D_OUTBOUND, log("netspool begin receive");
 	    netspool_receive(&state.netspool);
 	} else {
-	    //log("netspool could not start receive");
+	    //DEB((D_OUTBOUND, log("netspool could not start receive");
 	    return 1;
 	}
 
 	if(state.netspool.state == NS_RECVFILE) {
-	    /*log("netspool start file");*/
+	    /*DEB((D_OUTBOUND, log("netspool start file");*/
 	    *dest = NULL;
 	    return 0;
 	}
 
 	if(state.netspool.state == NS_READY) {
-	    //log("netspool queue empty");
+	    //DEB((D_OUTBOUND, log("netspool queue empty");
 	    netspool_end(&state.netspool);
 	}
 
@@ -254,42 +254,42 @@ int p_tx_fopen(s_protinfo *pi, s_filehint *hint)
 		return 1;
 		
 	if (hint) {
-	    log("trying to reopen file %s size %d time %d", hint->fn, hint->sz, hint->tm);
+	    DEB((D_OUTBOUND, "trying to reopen file %s size %d time %d", hint->fn, hint->sz, hint->tm));
 	    int i;
 	    for (i=0; i++; i<pi->n_sentfiles) {
-	        log("check %s %d %d", pi->sentfiles[i].net_name, pi->sentfiles[i].bytes_total, pi->sentfiles[i].mod_time);
+	        DEB((D_OUTBOUND, "check %s %d %d", pi->sentfiles[i].net_name, pi->sentfiles[i].bytes_total, pi->sentfiles[i].mod_time));
 	        if (strcmp(pi->sentfiles[i].net_name, hint->fn)==0) {
-	            log("name match");
+	            DEB((D_OUTBOUND, "name match"));
 	            if (pi->sentfiles[i].bytes_total == hint->sz) {
-	                log("size match");
+	                DEB((D_OUTBOUND, "size match"));
 	                if (pi->sentfiles[i].mod_time == hint->tm) {
-	                    log("time match");
+	                    DEB((D_OUTBOUND, "time match"));
 	                    if (!pi->sentfiles[i].fp) {
-	                        log("already closed");
+	                        DEB((D_OUTBOUND, "already closed"));
 	                        return -1;
 	                    }
 	                    pi->send = pi->sentfiles + i;
 	                    pi->send->eofseen = FALSE;
                             pi->send->status = FSTAT_PROCESS;
-                            log("reopened %s", pi->send->fname);
+                            DEB((D_OUTBOUND, "reopened %s", pi->send->fname));
 	                    return 0;
 	                }
 	            }
 	        }
 	    }
-	    log("no file for this hint");
+	    DEB((D_OUTBOUND, "no file for this hint"));
 	    return -1;
 	}
 
 get_next_file:
 	if( prot_get_next_file(&ptrl, pi) ) {
-	    log("no next file");
+	    DEB((D_OUTBOUND, "no next file"));
 	    return 1;
         }
         
 	if( ptrl ) {
 	
-	    log("sending local file");
+	    DEB((D_OUTBOUND, "sending local file"));
 	    /* Mark this file as "processed" */
 	    ptrl->status = STATUS_SENDING;
 
@@ -328,14 +328,14 @@ get_next_file:
 	 */
 	if( pi->sentfiles && pi->n_sentfiles > 0 )
 	{
-	        log("adding file to sentfile");
+	        DEB((D_OUTBOUND, "adding file to sentfile"));
 		pi->sentfiles = (s_finfo *)xrealloc(pi->sentfiles, sizeof(s_finfo)*(pi->n_sentfiles+1));
 		memset(&pi->sentfiles[pi->n_sentfiles], '\0', sizeof(s_finfo));
 		pi->send = &pi->sentfiles[pi->n_sentfiles++];
 	}
 	else
 	{
-	        log("adding file to new sentfile");
+	        DEB((D_OUTBOUND, "adding file to new sentfile"));
 		pi->sentfiles = (s_finfo *)xmalloc(sizeof(s_finfo));
 		memset(pi->sentfiles, '\0', sizeof(s_finfo));
 		pi->send = pi->sentfiles;
@@ -407,7 +407,7 @@ get_next_file:
 int p_tx_rewind(s_protinfo *pi, size_t pos)
 {
     if( !pi || !pi->send || !pi->send->fp) {
-        log("cannot rewind");
+        DEB((D_OUTBOUND, "cannot rewind"));
         return -1;
     }
     return fseek(pi->send->fp, pos, SEEK_SET);
@@ -469,7 +469,7 @@ int p_tx_fclose(s_protinfo *pi)
 	long cps = 0;
 	
 	if (!pi->send) {
-	    log("already closed");
+	    DEB((D_OUTBOUND, "already closed"));
 	    return -1;
 	}
 	
@@ -541,7 +541,7 @@ int p_tx_fclose(s_protinfo *pi)
 			break;
 #ifdef NETSPOOL
 		case ACTION_ACKNOWLEDGE:
-			log("netspool commit %s", state.netspool.filename);
+			DEB((D_OUTBOUND, "netspool commit %s", state.netspool.filename));
 			netspool_acknowledge(&state.netspool);
 			break;
 #endif
@@ -574,7 +574,7 @@ long int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
 
 #ifdef NETSPOOL
 	if (pi->send->netspool) {
-	    /*log("reading netspool file");*/
+	    /*DEB((D_OUTBOUND, log("reading netspool file");*/
 	    if( state.netspool.state != NS_RECVFILE ) {
 		log("send: wrong netspool state");
 		pi->send->status = FSTAT_SKIPPED;
@@ -587,10 +587,10 @@ long int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
 		pi->send->status = FSTAT_SKIPPED;
 		return -2;
 	    }
-	    /*log("got %d bytes from netspool", n);*/
+	    /*DEB((D_OUTBOUND, log("got %d bytes from netspool", n);*/
 	    return n;
 	} else {
-	    /*log("reading local file");*/
+	    /*DEB((D_OUTBOUND, log("reading local file");*/
 	}
 #endif
 	/*
@@ -749,9 +749,9 @@ static int p_move2inbound(s_protinfo *pi)
 		{
 			log("recv: cannot get unique name for \"%s\"",
 				pi->recv->local_name);
-			log("free realname");
+			DEB((D_FREE, "free realname"));
 			free(realname);
-			log("freed");
+			DEB((D_FREE, "freed"));
 			return 1;
 		}
 
@@ -799,14 +799,14 @@ static int p_move2inbound(s_protinfo *pi)
 	}
 	
 	if( realname ) {
-	        log("free realname");
+	        DEB((D_FREE, "free realname"));
 		free(realname);
-		log("freed");
+		DEB((D_FREE, "freed"));
 	}
 	if( uniqname ) {
-	        log("free uniqname");
+	        DEB((D_FREE, "free uniqname"));
 		free(uniqname);
-		log("freed");
+		DEB((D_FREE, "freed"));
 	}
 	
 	return rc ? 1 : 0;
@@ -988,13 +988,13 @@ int p_rx_fopen(s_protinfo *pi, char *fn, size_t sz, time_t tm, mode_t mode)
 			if( pi->recv->mod_time == localtogmt(st.st_mtime)
 			 && pi->recv->bytes_total == st.st_size )
 			{
-				log("recv: allready have \"%s\"", fname);
+				log("recv: already have \"%s\"", fname);
 				pi->recv->status = FSTAT_SKIPPED;
 			}
 		}
-	        log("free fname");
+	        DEB((D_FREE, "free fname"));
 		free(fname); fname = NULL;
-		log("freed");
+		DEB((D_FREE, "freed"));
 		
 		if( pi->recv->status == FSTAT_SKIPPED )
 			return 2;
@@ -1022,10 +1022,10 @@ int p_rx_fopen(s_protinfo *pi, char *fn, size_t sz, time_t tm, mode_t mode)
 				else	
 					pi->recv->status = FSTAT_REFUSED;
 				
-				log("free pi->recv->fname");
+				DEB((D_FREE, "free pi->recv->fname"));
 				free(pi->recv->fname);
 				pi->recv->fname = NULL;
-				log("freed");
+				DEB((D_FREE, "freed"));
 				
 				return pi->recv->status == FSTAT_SKIPPED ? 2 : 1;
 			}
@@ -1064,8 +1064,10 @@ int p_rx_fopen(s_protinfo *pi, char *fn, size_t sz, time_t tm, mode_t mode)
 		logerr("recv: cannot open \"%s\" -> refuse", pi->recv->fname);
 		
 		pi->recv->status = FSTAT_REFUSED;
+		DEB((D_FREE, "p_rx_open free"));
 		free(pi->recv->fname);
 		pi->recv->fname = NULL;
+		DEB((D_FREE, "p_rx_open ok"));
 		
 		return 1;
 	}
@@ -1595,8 +1597,10 @@ char *prot_unique_name(char *dirname, char *fname, int type)
 				*p = 'A';
 			else if( --p < result || *p == '.' || *p == '/' )
 			{
+			        DEB((D_FREE, "free result"));
 				free(result);
 				result = NULL;
+				DEB((D_FREE, "result ok"));
 				break;
 			}
 		}
@@ -1627,8 +1631,11 @@ char *prot_unique_name(char *dirname, char *fname, int type)
 	
 	if( try >= MAX_TRIES )
 	{
-		if( result )
+		if( result ) {
+		        DEB((D_FREE, "free result"));
 			free(result);
+			DEB((D_FREE, "result ok"));
+		}
 		
 		return NULL;
 	}
@@ -1647,7 +1654,7 @@ char *prot_unique_name(char *dirname, char *fname, int type)
  */
 void deinit_finfo(s_finfo *fi)
 {
-        log("deinit_finfo");
+        DEB((D_FREE, "deinit_finfo"));
 	if( fi->fp )
 		fclose(fi->fp);
 	
@@ -1659,7 +1666,7 @@ void deinit_finfo(s_finfo *fi)
 		free(fi->fname);
 	
 	memset(fi, '\0', sizeof(s_finfo));
-        log("deinit_finfo end");
+        DEB((D_FREE, "deinit_finfo end"));
 }
 
 /*****************************************************************************
@@ -1777,7 +1784,7 @@ void init_protinfo(s_protinfo *pi, bool caller)
 void deinit_protinfo(s_protinfo *pi)
 {
 	int i;
-	log("deinit_protinfo");
+	DEB((D_FREE, "deinit_protinfo"));
 	
 	for( i = 0; i < pi->n_sentfiles; i++ )
 		deinit_finfo(&pi->sentfiles[i]);
@@ -1793,5 +1800,5 @@ void deinit_protinfo(s_protinfo *pi)
 		free(pi->rcvdfiles);
 	
 	memset(pi, '\0', sizeof(s_protinfo));
-	log("deinit_protinfo end");
+	DEB((D_FREE, "deinit_protinfo end"));
 }

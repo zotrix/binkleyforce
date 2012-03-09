@@ -161,7 +161,7 @@ int session_addrs_check(s_sysaddr *addrs, int anum, const char *passwd,
 
 					/* Encode digest to the hex string */
 					string_bin_to_hex(digest_hex, digest_bin, 16);
-					log("good password is %s", digest_hex);
+					//log("good password is %s", digest_hex);
 
 					if( strcasecmp(passwd, digest_hex) == 0 )
 						good_passwd = TRUE;
@@ -621,7 +621,7 @@ void session_traffic(void)
 	rc = session_traffic_set_incoming(&state.traff_recv);
 	session_traffic_log(TRUE,  rc ? NULL : &state.traff_recv);
 
-	/* Outgoing traffic must be allread calculated */
+	/* Outgoing traffic must be already calculated */
 	session_traffic_log(FALSE, &state.traff_send);
 }
 

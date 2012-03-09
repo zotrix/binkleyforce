@@ -82,6 +82,9 @@ typedef struct {
 	int        options;
 	char       challenge[BINKP_MAXCHALLENGE+1];
 	int        challenge_length;
+	bool    has_TRF;
+	int     TRF_PKT;
+	int     TRF_other;
 } s_binkp_sysinfo;
 
 
@@ -172,6 +175,7 @@ void binkp_log_sysinfo(s_binkp_sysinfo *binkp);
 //void binkp_queue_sysinfo(s_bpinfo *bpi, s_binkp_sysinfo *binkp);
 void binkp_set_sysinfo(s_binkp_sysinfo *binkp, s_faddr *remote_addr, bool caller);
 void binkp_parse_options(s_binkp_sysinfo *binkp, char *options);
+int binkp_remote_traffic(s_handshake_protocol *THIS, s_traffic *dest);
 
 /* prot_binkp_api.c */
 extern s_handshake_protocol handshake_protocol_binkp;

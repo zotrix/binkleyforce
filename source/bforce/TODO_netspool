@@ -1,8 +1,0 @@
-tx_zmodem
-rx_zmodem
-hydra
-binkp_transfer
-
-
-  all of then do use p_tx_readfile
-  

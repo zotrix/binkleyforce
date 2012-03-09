@@ -249,10 +249,6 @@ int call_system_quiet(const char *connstr, bool inet)
 		return BFERR_FATALERROR;
 	}
 
-#ifdef DEBUG
-	(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
-#endif
-	
 	if( inet )
 	{
 		if( connstr && *connstr )
@@ -350,10 +346,6 @@ int call_system_modem(void)
 		log("can't continue without logging");
 		return BFERR_FATALERROR;
 	}
-
-#ifdef DEBUG
-	(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
-#endif
 	
 	if( (rc = port_open(state.modemport, 1, &oldtio)) == 0 )
 	{
@@ -505,10 +497,6 @@ int call_system_tcpip(int callwith) // only TCPIP values
 		log("can't continue without logging");
 		return BFERR_FATALERROR;
 	}
-
-#ifdef DEBUG
-	(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
-#endif
 	
 	switch( callwith ) {
 case CALL_TCPIP_BINKP:

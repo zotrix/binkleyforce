@@ -1,3 +1,9 @@
+=== 2012-03 ===
+
+$DEBUGLEVEL, $DEBUGFILE removed - please use configuration options
+
+DNS zone support
+
 === 2012-02 ===
 
 Netspool support

@@ -69,10 +69,6 @@ int answ_system(e_session type, char *connstr, int inetd)
 		gotoexit(BFERR_FATALERROR);
 	}
 
-#ifdef DEBUG
-	(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
-#endif
-	
 	if( inetd )
 	{
 		if( connstr && *connstr )
