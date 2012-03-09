@@ -614,26 +614,26 @@ case 4:
 
 }
 
+#define PROTO_ERROR(msg) log("error: %s", msg); bstate->extracmd[0] = BPMSG_ERR; strcpy(bstate->extracmd+1, msg); bstate->extraislast = true; return -1;
+
 
 int binkp_doreceiveblock(s_binkp_state *bstate, char *buf, int block_type, unsigned short block_length)
 {
     switch (block_type) {
 case BINKP_BLK_CMD:
         if (block_length<1) {
-            log("zero length command received");
-            return -1;
+            PROTO_ERROR("Zero length command received")
         }
         buf[block_length] = 0; // fencing for easy processing
         switch (buf[0]) {
 case BPMSG_NUL:          /* Site information, just logging */
-            log("M_NUL");
+            log("received M_NUL len=%d", block_length);
             binkp_process_NUL(bstate->remote_data, buf+1);
             return 1;
 case BPMSG_ADR:              /* List of addresses */
-            log("M_ADR");
+            log("received M_ADR len=%d", block_length);
             if (bstate->address_established) {
-                log("remote tries to change address");
-                return -1;
+                PROTO_ERROR("remote tries to change address");
             }
             if( bstate->extracmd[0] !=-1 ) return 0; // suspend !!!
             binkp_process_ADR(buf+1);
@@ -692,14 +692,12 @@ case BPMSG_ADR:              /* List of addresses */
             bstate->address_established = true;
             return 1;
 case BPMSG_PWD:              /* Session password */
-            log("M_PWD received");
+            log("received M_PWD len=%d", block_length);
             if (bstate->mode != bmode_incoming_handshake) {
-                log("unexpected M_PWD");
-                return -1;
+                PROTO_ERROR("unexpected M_PWD");
             }
             if (!bstate->address_established) {
-                log("M_PWD before M_ADR");
-                return -1;
+                PROTO_ERROR("M_PWD before M_ADR");
             }
 
 	    strnxcpy(bstate->remote_data->passwd, buf+1, block_length);
@@ -732,20 +730,18 @@ case BPMSG_PWD:              /* Session password */
             break;
 
 case BPMSG_FILE:             /* File information */
-            log("M_FILE");
+            log("received M_FILE len=%d", block_length);
             if (bstate->mode != bmode_transfer) {
-                log("unexpected M_FILE");
-                return -1;
+                PROTO_ERROR("unexpected M_FILE");
             }
             s_bpfinfo recvfi;
             if( binkp_parsfinfo(buf+1, &recvfi, true) ) {
 		log ("M_FILE parse error: %s", buf + 1);
-		return -1;
+		PROTO_ERROR("invalid M_FILE");
             }
             bstate->batch_recv_count += 1;
             if (bstate->frs == frs_data) {
-                log("overlapping M_FILE received");
-                return -1;
+                PROTO_ERROR("overlapping M_FILE received");
             }
 
 	    if (bstate->frs == frs_didget) {
@@ -766,7 +762,7 @@ case BPMSG_FILE:             /* File information */
 
 	    if (bstate->frs!=frs_nothing && bstate->frs!=frs_skipping) {
 	        log("strange receiving mode %d", bstate->frs);
-	        return -1;
+	        PROTO_ERROR("invalid mode for M_FILE");
 	    }
 
             if( bstate->extracmd[0] != -1 ) return 0;
@@ -804,17 +800,14 @@ case 2:
 		bstate->frs = frs_skipping;
 		return 1;
 default:
-		log("p_rx_fopen_error");
-		return -1;
+		PROTO_ERROR("p_rx_fopen_error");
             }
-            log("never get here");
-            return -1;
+            PROTO_ERROR("never should get here");
             
 case BPMSG_OK:               /* Password was acknowleged (data ignored) */
-            log("M_OK received");
+            log("received M_OK len=%d", block_length);
             if (bstate->mode != bmode_outgoing_handshake) {
-                log("unexpected M_OK");
-                return -1;
+                PROTO_ERROR("unexpected M_OK");
             }
             if (session_addrs_lock(state.remoteaddrs, state.n_remoteaddr)) {
                 log("error: unable to lock");
@@ -829,33 +822,29 @@ case BPMSG_OK:               /* Password was acknowleged (data ignored) */
             return 2;
 
 case BPMSG_EOB:              /* End Of Batch (data ignored) */
-            log("M_EOB received");
+            log("received M_EOB len=%d", block_length);
             if (bstate->mode != bmode_transfer) {
-                log("unexpected M_EOB");
-                return -1;
+                PROTO_ERROR("unexpected M_EOB");
             }
             bstate->batchreceivecomplete += 1;
             return 1; // continue receiving as M_GOT may and would arrive
 
 case BPMSG_GOT:              /* File received */
 case BPMSG_SKIP:
-            log("received GOT/SKIP");
+            log("received GOT/SKIP len=%d", block_length);
             if (bstate->mode != bmode_transfer) {
-                log("unexpected M_GOT/M_SKIP");
-                return -1;
+                PROTO_ERROR("unexpected M_GOT/M_SKIP");
             }
             s_bpfinfo fi;
             int i;
 	    if (binkp_parsfinfo (buf+1, &fi, false)) {
-	        log("error parsing");
-	        return -1;
+	        PROTO_ERROR("error parsing M_GOT/M_SKIP");
 	    }
 
 	    if (strcmp (bstate->pi->send->net_name, fi.fn) == 0 && bstate->pi->send->status != FSTAT_WAITACK) {
 	        log("aborting current file");
 	        if (bstate->pi->send->netspool) {
-	            log("cannot abort netspool in progress");
-	            return -1;
+	            PROTO_ERROR("cannot SKIP or REFUSE netspool");
 	        }
 	        p_tx_fclose(bstate->pi);
 	        bstate->phase = 0;
@@ -867,8 +856,7 @@ case BPMSG_SKIP:
 	            bstate->pi->send = &bstate->pi->sentfiles[i];
 	            if (buf[0] == BPMSG_SKIP) {
 	                if (bstate->pi->send->netspool) {
-	                    log("cannot skip netspool");
-	                    return -1; // no reason to continue sending
+	                    PROTO_ERROR("cannot skip netspool");
 	                }
 	                log("skipped %s", fi.fn);
 	                bstate->pi->send->status = FSTAT_REFUSED;
@@ -879,8 +867,7 @@ case BPMSG_SKIP:
 	                } else {
 	                    log("confirmed not sent file - skipped %s", fi.fn);
 	                    if (bstate->pi->send->netspool) {
-	                        log("cannot skip netspool");
-	                        return -1; // no reason to continue sending
+	                        PROTO_ERROR("cannot skip netspool");
 	                    }
 		            bstate->pi->send->status = FSTAT_SKIPPED;
 	                }
@@ -891,8 +878,7 @@ case BPMSG_SKIP:
 	            goto check_that_all_files_are_confirmed;
 	        }
 	    }
-            log("unmatched file name");
-            return -1;
+            PROTO_ERROR("unmatched file name in M_GOT/M_SKIP");
 
 check_that_all_files_are_confirmed:
             {
@@ -917,15 +903,14 @@ case BPMSG_BSY:              /* All AKAs are busy */
             return 3;
 
 case BPMSG_GET:              /* Get a file from offset */
-            log("received M_GET: cancel transmitting current file and send requested file if it is in outbound");
+            log("received M_GET len=%d", block_length);
             if (bstate->mode != bmode_transfer) {
-                log("unexpected M_GET");
-                return -1;
+                PROTO_ERROR("unexpected M_GET");
             }
             s_bpfinfo getfi;
             if (binkp_parsfinfo(buf+1, &getfi, true) != 0) {
                 log("error parsing M_GET %s", buf+1);
-                return -1;
+                PROTO_ERROR("invalid M_GET");
             }
             log("M_GET file %s size %d time %d offset %d", getfi.fn, getfi.sz, getfi.tm, getfi.offs);
 
@@ -959,7 +944,7 @@ case BPMSG_GET:              /* Get a file from offset */
                 if( p_tx_rewind(bstate->pi, getfi.offs) != 0 ) {
                     log("failed to rewind");
                     p_tx_fclose(bstate->pi);
-                    return -1;
+                    PROTO_ERROR("seek error")
                 }
 		bstate->pi->send->bytes_skipped = getfi.offs;
 		bstate->pi->send->bytes_sent = getfi.offs;
@@ -982,13 +967,12 @@ case BPMSG_GET:              /* Get a file from offset */
             hint.sz = getfi.sz;
             hint.tm = getfi.tm;
             if( p_tx_fopen(bstate->pi, &hint) != 0 ) {
-                log("could not satisfy M_GET");
-                return -1;
+                PROTO_ERROR("could not satisfy M_GET");
             }
             if( p_tx_rewind(bstate->pi, getfi.offs) != 0 ) {
                 log("failed to rewind");
                 p_tx_fclose(bstate->pi);
-                return -1;
+                PROTO_ERROR("seek error 2");
             }
             bstate->waiting_got = true;
 	    log("sending \"%s\" from %ld offset", bstate->pi->send->net_name, (long)getfi.offs);
@@ -1003,7 +987,7 @@ case BPMSG_GET:              /* Get a file from offset */
 	    return 1;
         }
         log("unknown command %d received", buf[0]);
-        return -1;
+        PROTO_ERROR("invalid command")
 
 case BINKP_BLK_DATA:
         //if there is file in progress
@@ -1013,8 +997,7 @@ case BINKP_BLK_DATA:
             return 1;
         }
         if (bstate->frs == frs_nothing) {
-            log("unexpected data block");
-            return -1;
+            PROTO_ERROR("unexpected data block");
         }
         if (bstate->frs == frs_didget || bstate->frs == frs_skipping) {
             log("did M_GET or M_GOT or M_SKIP, skipping data");
@@ -1027,7 +1010,7 @@ case BINKP_BLK_DATA:
         n = p_rx_writefile(buf, block_length, bstate->pi);
 
 	if( n < 0 ) {
-	    log("error writing file");
+	    log("error writing local file");
 	    if( n == -2 ) {
 		bstate->extracmd[0] = BPMSG_GOT;
 		sprintf(bstate->extracmd+1, "%s %ld %ld", bstate->pi->recv->net_name, (long)bstate->pi->recv->bytes_total,
@@ -1055,7 +1038,7 @@ case BINKP_BLK_DATA:
 		bstate->frs = frs_skipping;
 		bstate->pi->recv->status = FSTAT_REFUSED;
 		p_rx_fclose(bstate->pi);
-		return -1;
+		PROTO_ERROR("extra data for file")
 	    }
 	    else if( bstate->pi->recv->bytes_received == bstate->pi->recv->bytes_total ) {
 		log("receive completed");
@@ -1083,11 +1066,9 @@ case BINKP_BLK_DATA:
 	        return 1;
 	    }
 	}
-        log("never should be here");
-        return -1;
+        PROTO_ERROR("never should be here");
 default:
-        log("impossible block_type");
-        return -1;
+        PROTO_ERROR("impossible block_type");
     }
 }
 
