@@ -483,7 +483,7 @@ exit:
 #ifdef DEBUG
 	if( debug_isopened() ) debug_close();
 #endif
-
+        DEB((D_FREE, "good exit"));
 	exit(rc);
 }
 

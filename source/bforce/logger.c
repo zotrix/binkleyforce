@@ -106,11 +106,6 @@ int log_open(const char *logname, const char *ext, const char *tty)
 	
 	if( logname )
 	{
-		/* Reset previous settings */
-		*log_name = '\0';
-		*log_extension = '\0';
-		*log_ttyname = '\0';
-		
 		strnxcpy(log_name, logname, sizeof(log_name));
 		
 		if( tty && *tty )
@@ -122,14 +117,9 @@ int log_open(const char *logname, const char *ext, const char *tty)
 			strnxcat(log_name, ".", sizeof(log_name));
 			strnxcat(log_name, ext, sizeof(log_name));
 		}
-		
-		if( (log_fp = fopen(log_name, "a")) == NULL )
-		{
-			logerr("can't open log file \"%s\"", log_name);
-			return -1;
-		}
 	}
-	else if( log_name )
+	
+	if( log_name )
 	{
 		/* Open previously set log file */
 			
@@ -462,7 +452,29 @@ int debug_open()
 
 	if( debug_name )
 	{
-		if( (debug_fp = fopen(debug_name, "a")) == NULL )
+
+                char log_name[PATH_MAX];
+	        char *marker;
+		/* Reset previous settings */
+		*log_name = '\0';
+		*log_extension = '\0';
+		*log_ttyname = '\0';
+		
+		if (marker = strchr(debug_name, '!')) {
+		    struct timespec xtm;
+		    struct tm btm;
+		    clock_gettime(CLOCK_REALTIME, &xtm);
+		    gmtime_r(&xtm.tv_sec, &btm);
+		    // hope sysop will not DoS his own node
+		    memcpy(log_name, debug_name, marker-debug_name);
+		    sprintf( log_name + (marker-debug_name) + strftime(log_name + (marker-debug_name), 100, ".%Y-%m-%d.%H.%M.%S.", &btm), "%09ld.%s", xtm.tv_nsec, marker+1);
+		    // I'm too lazy to add variable
+		} 
+		else {
+		    strcpy(log_name, debug_name);
+		}
+
+		if( (debug_fp = fopen(log_name, "a")) == NULL )
 		{
 			/* Don't try to open it next time */
 			debug_invalid_name = TRUE;

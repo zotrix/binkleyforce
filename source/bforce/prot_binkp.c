@@ -360,6 +360,7 @@ case 0: // MD5 challenge
 	}	
 
 case 1: // send sysinfo
+        DEB((D_24554, "send sysinfo"));
         my_sf = bstate->subphase;
         bstate->subphase+=1;
         *block_type = BINKP_BLK_CMD;
@@ -450,7 +451,7 @@ case 3: // send password on outgoing or pw confirmation on incoming
         // special empty password is sent if there is no password for the remote addr
         if (bstate->mode==bmode_incoming_handshake) {
             if (bstate->password_received) {
-                DEB((D_24554, "password verified"));
+                DEB((D_24554, "send OK, password verified"));
                 buf[0] = BPMSG_OK;
                 *block_type = BINKP_BLK_CMD;
                 *block_length = 1;
@@ -465,7 +466,7 @@ case 3: // send password on outgoing or pw confirmation on incoming
                 DEB((D_24554, "address not received still"));
                 return 0;
             }
-            DEB((D_24554, "sending password"));
+            DEB((D_24554, "send password"));
 
             buf[0] = BPMSG_PWD;
             *block_type = BINKP_BLK_CMD;
@@ -550,6 +551,7 @@ case 4:
             case 2: //send file data
                 n = p_tx_readfile (buf, 4096, bstate->pi); // BINKP_MAXBLOCK
                 if (n>0) {
+                    DEB((D_24554, "send data block len=%d", n));
                     *block_type = BINKP_BLK_DATA;
                     *block_length = n;
                     bstate->pi->send->bytes_sent += n;
