@@ -31,11 +31,13 @@ SPOOLDIR	= @SPOOLDIR@
 DAEMON_LOGFILE	= $(LOGDIR)/bf-daemon
 BFORCE_LOGFILE	= $(LOGDIR)/bf-log
 BFORCE_DEBFILE	= $(LOGDIR)/bf-debug
+BFORCE_DEBLEVEL	= 0L
 BFORCE_CFGFILE	= $(CONFDIR)/bforce.conf
 
 DEFINES		= -DDAEMON_LOGFILE=\"$(DAEMON_LOGFILE)\" \
 		-DBFORCE_LOGFILE=\"$(BFORCE_LOGFILE)\" \
 		-DBFORCE_DEBFILE=\"$(BFORCE_DEBFILE)\" \
+		-DBFORCE_DEBLEVEL=$(BFORCE_DEBLEVEL) \
 		-DBFORCE_CFGFILE=\"$(BFORCE_CFGFILE)\" \
 		-DBF_OS=\"@build_os@\" @DEFS@
 
@@ -101,7 +103,7 @@ BFORCE_OBJS	= bforce/bforce.o \
 		bforce/u_misc.o bforce/u_string.o \
 		bforce/u_time.o bforce/u_file.o \
 		bforce/u_pkt.o bforce/u_recode.o \
-		bforce/u_plock.o
+		bforce/u_plock.o bforce/netspool.o
 
 .c.o:
 		@echo Compiling $*.c

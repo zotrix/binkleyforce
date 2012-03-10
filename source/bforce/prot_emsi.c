@@ -610,7 +610,7 @@ void emsi_set_sysinfo(s_emsi *emsi, s_emsi *remote_emsi, int hrc,
 	const char *p_emsifr    = conf_string(cf_emsi_FR_time);
 
 	/* free previously allocated memory */
-	if( emsi->addrs ) free(emsi->addrs);
+//	if( emsi->addrs ) free(emsi->addrs);
 		
 	memset(emsi, '\0', sizeof(s_emsi));
 	
@@ -624,7 +624,7 @@ void emsi_set_sysinfo(s_emsi *emsi, s_emsi *remote_emsi, int hrc,
 		
 	/* Add primary address */
 	if( primary )
-		session_addrs_add(&emsi->addrs, &emsi->anum, *primary);
+		session_addrs_add(&state.localaddrs, &state.n_localaddr, *primary);
 
 	/* Add other AKAs */
 	for( addr_ptr = conf_first(cf_address); addr_ptr;
@@ -638,11 +638,11 @@ void emsi_set_sysinfo(s_emsi *emsi, s_emsi *remote_emsi, int hrc,
 		}
 		
 		if( !hide_ptr && primary != &addr_ptr->d.falist.addr )
-			session_addrs_add(&emsi->addrs, &emsi->anum,
+			session_addrs_add(&state.localaddrs, &state.n_localaddr,
 					addr_ptr->d.falist.addr);
 	}
 	
-	if( emsi->anum == 0 )
+	if( state.localaddrs == 0 )
 		log("warning: no addresses will be presented to remote");
 
 	/* session password */

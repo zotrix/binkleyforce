@@ -249,10 +249,6 @@ int call_system_quiet(const char *connstr, bool inet)
 		return BFERR_FATALERROR;
 	}
 
-#ifdef DEBUG
-	(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
-#endif
-	
 	if( inet )
 	{
 		if( connstr && *connstr )
@@ -350,10 +346,6 @@ int call_system_modem(void)
 		log("can't continue without logging");
 		return BFERR_FATALERROR;
 	}
-
-#ifdef DEBUG
-	(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
-#endif
 	
 	if( (rc = port_open(state.modemport, 1, &oldtio)) == 0 )
 	{
@@ -505,10 +497,6 @@ int call_system_tcpip(int callwith) // only TCPIP values
 		log("can't continue without logging");
 		return BFERR_FATALERROR;
 	}
-
-#ifdef DEBUG
-	(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
-#endif
 	
 	switch( callwith ) {
 case CALL_TCPIP_BINKP:
@@ -758,6 +746,21 @@ int call_system(s_faddr addr, const s_bforce_opts *opts)
 				state.override.sIpaddr, sizeof(state.node.host));
 	}
 	
+	if( call_mayuse & CALL_TCPIP_ANY && !tcpip_isgood_host(state.node.host) ) {
+	    char *fidodnszone = conf_string(cf_fidodnszone);
+	    if (fidodnszone) {
+	        if (addr.point) {
+	            snprintf(state.node.host, BNI_MAXHOST, "p%d.f%d.n%d.z%d.%s",
+	                addr.point, addr.node, addr.net, addr.zone, fidodnszone);
+	        }
+	        else {
+	            snprintf(state.node.host, BNI_MAXHOST, "f%d.n%d.z%d.%s",
+	                addr.node, addr.net, addr.zone, fidodnszone);
+	        }
+	        log("use fido DNS zone: %s", state.node.host);
+	    }
+	}
+
 	if( call_mayuse & CALL_TCPIP_ANY && !tcpip_isgood_host(state.node.host) )
 	{
 		call_mayuse &= ~CALL_TCPIP_ANY;

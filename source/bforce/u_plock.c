@@ -161,7 +161,9 @@ int plock_create(const char *lockname)
 		*++p = '\0';
 	else
 	{
+	        DEB((D_FREE, "plock free"));
 		free(tmpname);
+		DEB((D_FREE, "plock freed"));
 		return PLOCK_ERROR;
 	}
 	tmpname = xstrcat(tmpname, "bforce-XXXXXX");
@@ -169,7 +171,9 @@ int plock_create(const char *lockname)
 	if( (p = mktemp(tmpname)) == NULL )
 	{
 		logerr("can't generate unique file name from \"%s\"", tmpname);
+		DEB((D_FREE, "plock free"));
 		free(tmpname);
+		DEB((D_FREE, "plock freed"));
 		return PLOCK_ERROR;
 	}
 	
@@ -179,7 +183,9 @@ int plock_create(const char *lockname)
 	DEB((D_OUTBOUND, "out_bsy_createfile: createlink(\"%s\", \"%s\"), rc = %d",
 		lockname, p, rc));
 	
+	DEB((D_FREE, "plock free"));
 	free(tmpname);
+	DEB((D_FREE, "plock freed"));
 	
 	return rc;
 }

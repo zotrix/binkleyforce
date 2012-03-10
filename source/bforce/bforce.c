@@ -422,13 +422,13 @@ int main(int argc, char *argv[], char *envp[])
 			}
 		}
 	}
-	
-/*	if( (rc = log_open(log_getfilename(LOG_FILE_SESSION), NULL, NULL)) )
+
+/*	if( (rc = log_open(BFORCE_LOGFILE, NULL, NULL)) ) //compiled in
 	{
 		log("can't continue without logging");
 		gotoexit(BFERR_FATALERROR);
-	}
-*/	
+	}*/
+	
 	/* Process primary config file */
 	if( opts.confname && *opts.confname )
 		rc = conf_readconf(opts.confname, 0);
@@ -442,16 +442,11 @@ int main(int argc, char *argv[], char *envp[])
 		(void)conf_readconf(opts.incname, 1);
 	
 	/* Reopen log file if it was defined in config */
-	if( log_open(log_getfilename(LOG_FILE_SESSION), NULL, NULL) )
+	if( log_reopen(log_getfilename(LOG_FILE_SESSION), NULL, NULL) )
 	{
 		log("can't continue without logging");
 		gotoexit(BFERR_FATALERROR);
 	}
-	
-#ifdef DEBUG
-	/* Same for the debug file */
-	(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
-#endif
 	
 	//char runmode_str[21];
 	//snprintf(runmode_str, 20, "Run mode: %d", opts.runmode);
@@ -485,10 +480,10 @@ exit:
 	
 	/* Shutdown logging services */
 	if( log_isopened() ) log_close();
+        DEB((D_FREE, "good exit"));
 #ifdef DEBUG
 	if( debug_isopened() ) debug_close();
 #endif
-
 	exit(rc);
 }
 

@@ -17,12 +17,12 @@
 #include "outbound.h"
 
 /* File transfer protocols return codes */
-#define PRC_NOERROR         0       /* No comments :) */
-#define PRC_ERROR           1       /* I/O error occured while snd./rcv. */
-#define PRC_REMOTEABORTED   2       /* "ABORT" initiated by remote */
-#define PRC_LOCALABORTED    3       /* We got SIGINT/SIGTERM? */
-#define PRC_CPSTOOLOW       4       /* Cps was so low.. :( */
-#define PRC_STOPTIME        5       /* Aborted due to the time limits */
+#define PRC_NOERROR         0        /* Successful session */
+#define PRC_ERROR           20       /* I/O error occured while snd./rcv. */
+#define PRC_REMOTEABORTED   21       /* "ABORT" initiated by remote */
+#define PRC_LOCALABORTED    22       /* We got SIGINT/SIGTERM? */
+#define PRC_CPSTOOLOW       23       /* Cps was so low.. :( */
+#define PRC_STOPTIME        24       /* Aborted due to the time limits */
 
 /* Send/Recv file status values */
 #define FSTAT_PROCESS  1
@@ -50,22 +50,24 @@ typedef struct traffic {
  * Information on currently receiveing/transmitting file
  */
 typedef struct finfo {
-	FILE  *fp;              /* File descriptor of current file */
-	char  *local_name;      /* Local file name that is used at our side */
-	char  *net_name;        /* File name as it known to the remote side */
-	char  *fname;           /* Local file name with full path */
-	time_t start_time;      /* Start of current file rx/tx transactions  */
-	time_t mod_time;        /* File last modification time */
-	mode_t mode;
-	size_t bytes_total;     /* File size */
-	size_t bytes_sent;
-	size_t bytes_received;
-	size_t bytes_skipped;   /* crash recovery */
-	int    eofseen;         /* end of file seen */
-	int    status;
-	int    action;
-	int    type;
-	int    flodsc;          /* Index number in flo files table */
+	FILE    *fp;            /* File descriptor of current file */
+	char    *local_name;    /* Local file name that is used at our side */
+	char    *net_name;      /* File name as it known to the remote side */
+	char    *fname;         /* Local file name with full path */
+	time_t  start_time;     /* Start of current file rx/tx transactions  */
+	time_t  mod_time;       /* File last modification time */
+	mode_t  mode;
+	size_t  bytes_total;    /* File size */
+	size_t  bytes_sent;
+	size_t  bytes_received;
+	size_t  bytes_skipped;  /* crash recovery */
+	int     eofseen;        /* end of file seen */
+	int     status;
+	int     action;
+	int     type;
+	int     flodsc;         /* Index number in flo files table */
+	bool    waitack;
+	bool    netspool;
 } s_finfo;
 
 /*
@@ -113,10 +115,17 @@ typedef struct protinfo {
 
 extern const char *Protocols[]; /* Protocol names */
 
-int   p_tx_fopen(s_protinfo *pi);
+typedef struct {
+    char *fn;
+    size_t sz;
+    time_t tm;
+} s_filehint;
+
+int   p_tx_fopen(s_protinfo *pi, s_filehint *hint);
 int   p_tx_fclose(s_protinfo *pi);
-int   p_tx_readfile(char *buf, size_t sz, s_protinfo *pi);
-int   p_rx_writefile(const char *buf, size_t sz, s_protinfo *pi);
+int   p_tx_rewind(s_protinfo *pi, size_t pos);
+long int   p_tx_readfile(char *buf, size_t sz, s_protinfo *pi);
+long int   p_rx_writefile(const char *buf, size_t sz, s_protinfo *pi);
 int   p_compfinfo(s_finfo *finf, const char *fn, size_t sz, time_t tm);
 int   p_rx_fopen(s_protinfo *pi, char *f_name, size_t f_size, time_t f_modtime, mode_t f_mode);
 int   p_rx_fclose(s_protinfo *pi);

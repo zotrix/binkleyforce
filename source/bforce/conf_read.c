@@ -32,10 +32,10 @@ const char *conf_getconfname(void)
 	return(name);
 }
 
-int conf_readpasswdlist(s_falist **pwdlist, char *fname)
+/*int conf_readpasswdlist(s_falist **pwdlist, char *fname)
 {
 	return(0);
-}
+} */
 
 /*
  *  Prepare config string for parsing, check for comments
@@ -131,6 +131,7 @@ static void conf_parsestr(char *str, char **key, char **expr, char **value)
 
 int conf_readconf(const char *confname, int inclevel)
 {
+//        printf("%s %d\n", confname, inclevel);
 	FILE *fp = NULL;
 	char tmp[BF_MAXCFGLINE + 1];
 	int rc, maxrc = 0;
@@ -300,7 +301,7 @@ int conf_readconf(const char *confname, int inclevel)
 					isifexpr = FALSE;
 				}
 			}
-			else if( strcasecmp(p_key+1, "logfile") == 0 )
+/*			else if( strcasecmp(p_key+1, "logfile") == 0 )
 			{
 				if( value == NULL || expr )
 				{
@@ -359,7 +360,7 @@ int conf_readconf(const char *confname, int inclevel)
 					rc = PROC_RC_IGNORE;
 				}
 #endif
-			}
+			}*/
 			else
 			{
 				log("unknown directive `%s'", p_key);
@@ -426,11 +427,24 @@ int conf_readconf(const char *confname, int inclevel)
 	
 	DEB((D_CONFIG, "readconfig: exit with maxrc = %d", maxrc));
 
+        /* update subsystems */
+        if (inclevel==0) { // end of main config
+            if( log_reopen(log_getfilename(LOG_FILE_SESSION), NULL, NULL) )
+            {
+                log("can't continue without logging");
+                exit(-1);
+            }
+#ifdef DEBUG
+            debug_configure();
+
+#endif
+        }
+
 	return maxrc;
 }
 
 #ifdef DEBUG
-void debug_override(void)
+/*void debug_override(void)
 {
 	s_cval_entry *ptrl;
 	char abuf[BF_MAXADDRSTR+1];
@@ -452,6 +466,6 @@ void debug_override(void)
 	}
 
 	DEB((D_CONFIG, "debug_override: END"));
-}
+}*/
 #endif /* DEBUG */
 

@@ -68,8 +68,7 @@ int req_createsrif(char *sname, char *req, char *rsp)
 	else
 		fprintf(fp, "Sysop SysOp\n");
 
-	if( state.handshake && state.handshake->remote_address
-	 && (aptr = state.handshake->remote_address(state.handshake)) )
+	if( aptr = session_1remote_address() )
 		fprintf(fp, "AKA %s\n", ftn_addrstr(abuf, *aptr));
 	else
 		return -1;

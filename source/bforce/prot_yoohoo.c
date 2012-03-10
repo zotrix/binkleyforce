@@ -64,35 +64,35 @@ static int yoohoo_getword(const char *buf)
  * Return value:
  * 	None
  */
-static void yoohoo_put_hello(char *buffer, s_yoohoo_sysinfo *hello)
+static void yoohoo_put_hello(char *buffer, s_yoohoo_sysinfo *myhello)
 {
 	char *p, *q;
 
-	ASSERT(buffer && hello);
+	ASSERT(buffer && myhello);
 	
 	memset(buffer, '\0', YOOHOO_HELLOLEN);
 	
 	p = buffer;
 	p = yoohoo_putword(p, 0x6f);
 	p = yoohoo_putword(p, 0x01);                 /* Hello version */
-	p = yoohoo_putword(p, hello->product_code);  /* Product code */
-	p = yoohoo_putword(p, hello->version_maj);   /* Major version */
-	p = yoohoo_putword(p, hello->version_min);   /* Minor version */
+	p = yoohoo_putword(p, myhello->product_code);  /* Product code */
+	p = yoohoo_putword(p, myhello->version_maj);   /* Major version */
+	p = yoohoo_putword(p, myhello->version_min);   /* Minor version */
 	
-	strnxcpy(p, hello->system, 60);              /* Node name */
+	strnxcpy(p, myhello->system, 60);              /* Node name */
 	
 	/*
 	 * Add domain after the end of 'Node name'
 	 * TODO: check it for buffer overflows %-I
 	 */
-	if( hello->anum > 0 && hello->addrs[0].addr.domain
-	                    && *hello->addrs[0].addr.domain )
+	if( state.n_localaddr > 0 && state.localaddrs[0].addr.domain
+	                    && *state.localaddrs[0].addr.domain )
 	{
 		char *q;
-		if( strlen(hello->system) + strlen(hello->addrs[0].addr.domain) > 57 )
+		if( strlen(myhello->system) + strlen(state.localaddrs[0].addr.domain) > 57 )
 		{
-			if( strlen(hello->addrs[0].addr.domain) < 60 )
-				q = p + (60 - strlen(hello->addrs[0].addr.domain));
+			if( strlen(state.localaddrs[0].addr.domain) < 60 )
+				q = p + (60 - strlen(state.localaddrs[0].addr.domain));
 			else
 				q = p;
 			
@@ -100,29 +100,29 @@ static void yoohoo_put_hello(char *buffer, s_yoohoo_sysinfo *hello)
 		}
 		else
 		{
-			q = p + strlen(hello->system) + 1;
+			q = p + strlen(myhello->system) + 1;
 		}
-		strnxcpy(q, hello->addrs[0].addr.domain, 60-(q-p));
+		strnxcpy(q, state.localaddrs[0].addr.domain, 60-(q-p));
 	}
 	p += 60;
 
-	strnxcpy(p, hello->sysop, 20);               /* SysOp name */
+	strnxcpy(p, myhello->sysop, 20);               /* SysOp name */
 	p += 20;
 	
-	if( hello->anum > 0 )
+	if( state.n_localaddr > 0 )
 	{
-		p = yoohoo_putword(p, hello->addrs[0].addr.zone);
-		p = yoohoo_putword(p, hello->addrs[0].addr.net);
-		p = yoohoo_putword(p, hello->addrs[0].addr.node);
-		p = yoohoo_putword(p, hello->addrs[0].addr.point);
+		p = yoohoo_putword(p, state.localaddrs[0].addr.zone);
+		p = yoohoo_putword(p, state.localaddrs[0].addr.net);
+		p = yoohoo_putword(p, state.localaddrs[0].addr.node);
+		p = yoohoo_putword(p, state.localaddrs[0].addr.point);
 	}
 	else
 		p += 8;
 	
-	strncpy(p, hello->passwd, 8);                /* Session password */
+	strncpy(p, myhello->passwd, 8);                /* Session password */
 	p += 8;
 	p += 8;                                      /* Reserved 8 bytes */
-	p = yoohoo_putword(p, hello->capabilities);  /* Capabilities */
+	p = yoohoo_putword(p, myhello->capabilities);  /* Capabilities */
 	p += 12;                                     /* Reserved 12 bytes */
 
 #ifdef DEBUG
@@ -145,11 +145,11 @@ static void yoohoo_put_hello(char *buffer, s_yoohoo_sysinfo *hello)
  * Return value:
  * 	None
  */
-static int yoohoo_get_hello(s_yoohoo_sysinfo *hello, const char *buffer)
+static int yoohoo_get_hello(s_yoohoo_sysinfo *remhello, const char *buffer)
 {
 	s_faddr addr;
 	
-	ASSERT(buffer && hello);
+	ASSERT(buffer && remhello);
 
 #ifdef DEBUG
 	{
@@ -159,16 +159,16 @@ static int yoohoo_get_hello(s_yoohoo_sysinfo *hello, const char *buffer)
 	}
 #endif
 	
-	memset(hello, '\0', sizeof(s_yoohoo_sysinfo));
+	memset(remhello, '\0', sizeof(s_yoohoo_sysinfo));
 	
 	if( yoohoo_getword(buffer+2) != 0x01 )
 		log("YooHoo hello version is %d!", yoohoo_getword(buffer+2));
 	
-	hello->product_code  = yoohoo_getword(buffer+4);
-	hello->version_maj   = yoohoo_getword(buffer+6);
-	hello->version_min   = yoohoo_getword(buffer+8);
-	strnxcpy(hello->system, buffer+10, MIN(sizeof(hello->system),60+1));
-	strnxcpy(hello->sysop, buffer+70, MIN(sizeof(hello->sysop),20+1));
+	remhello->product_code  = yoohoo_getword(buffer+4);
+	remhello->version_maj   = yoohoo_getword(buffer+6);
+	remhello->version_min   = yoohoo_getword(buffer+8);
+	strnxcpy(remhello->system, buffer+10, MIN(sizeof(remhello->system),60+1));
+	strnxcpy(remhello->sysop, buffer+70, MIN(sizeof(remhello->sysop),20+1));
 
 	/*
 	 * Extract address
@@ -178,11 +178,11 @@ static int yoohoo_get_hello(s_yoohoo_sysinfo *hello, const char *buffer)
 	addr.net   = yoohoo_getword(buffer+92);
 	addr.node  = yoohoo_getword(buffer+94);
 	addr.point = yoohoo_getword(buffer+96);
-	session_addrs_add(&hello->addrs, &hello->anum, addr);
+	session_addrs_add(&state.remoteaddrs, &state.n_remoteaddr, addr);
 	
-	strnxcpy(hello->passwd, buffer+98, MIN(sizeof(hello->passwd),8+1));
+	strnxcpy(remhello->passwd, buffer+98, MIN(sizeof(remhello->passwd),8+1));
 	/* Reserved 8 bytes */
-	hello->capabilities = yoohoo_getword(buffer+114);
+	remhello->capabilities = yoohoo_getword(buffer+114);
 	/* Reserved 12 bytes */
 
 	return 0;
@@ -466,11 +466,11 @@ void yoohoo_set_sysinfo(s_yoohoo_sysinfo *local_data, int hrc,
 	 * Set our local address
 	 */
 	if( primary )
-		session_addrs_add(&local_data->addrs, &local_data->anum, *primary);
+		session_addrs_add(&state.localaddrs, &state.n_localaddr, *primary);
 	else if( (addr_ptr = conf_first(cf_address)) )
-		session_addrs_add(&local_data->addrs, &local_data->anum, addr_ptr->d.falist.addr);
+		session_addrs_add(&state.localaddrs, &state.n_localaddr, addr_ptr->d.falist.addr);
 
-	if( !local_data->anum )
+	if( !state.n_localaddr )
 		log("warning: no addresses will be presented to remote");
 
 	/*
@@ -557,35 +557,35 @@ void yoohoo_set_sysinfo(s_yoohoo_sysinfo *local_data, int hrc,
  * Return value:
  * 	None
  */
-void yoohoo_log_sysinfo(s_yoohoo_sysinfo *yoohoo)
+void yoohoo_log_sysinfo(s_yoohoo_sysinfo *remyoohoo)
 {
 	int i;
 	char abuf[BF_MAXADDRSTR+1];
 	
-	if( yoohoo->anum )
-		for( i = 0; i < yoohoo->anum; i++ )
+	if( state.n_remoteaddr )
+		for( i = 0; i < state.n_remoteaddr; i++ )
 		{
-			log("   Address : %s", ftn_addrstr(abuf, yoohoo->addrs[i].addr));
+			log("   Address : %s", ftn_addrstr(abuf, state.remoteaddrs[i].addr));
 		}
 	else
 		log("   Address : <none>");
 	
-	if( yoohoo->system[0] )
-		log("    System : %s", string_printable(yoohoo->system));
+	if( remyoohoo->system[0] )
+		log("    System : %s", string_printable(remyoohoo->system));
 
 #ifdef BFORCE_LOG_PASSWD
-	if( yoohoo->passwd[0] )
-		log("  Password : %s", string_printable(yoohoo->passwd));
+	if( remyoohoo->passwd[0] )
+		log("  Password : %s", string_printable(remyoohoo->passwd));
 #endif
 
-	if( yoohoo->sysop[0] )
-		log("     SysOp : %s", string_printable(yoohoo->sysop));
+	if( remyoohoo->sysop[0] )
+		log("     SysOp : %s", string_printable(remyoohoo->sysop));
 
-	if( yoohoo->product_code || yoohoo->version_maj || yoohoo->version_min )
+	if( remyoohoo->product_code || remyoohoo->version_maj || remyoohoo->version_min )
 	{
 		log("    Mailer : %s [%02x] %d.%d",
-			"?", yoohoo->product_code,
-			yoohoo->version_maj, yoohoo->version_min);
+			"?", remyoohoo->product_code,
+			remyoohoo->version_maj, remyoohoo->version_min);
 	}
 }
 

@@ -271,6 +271,11 @@ typedef enum {
 	cf_debug_level,
 #endif
 	cf_split_inbound,
+#ifdef NETSPOOL
+        cf_netspool_host,
+        cf_netspool_port,
+#endif
+        cf_fidodnszone,
 	BFORCE_NUMBER_OF_KEYWORDS
 } bforce_config_keyword;
 
@@ -314,7 +319,7 @@ typedef struct conf_entry {
 		CT_STRING,
 		CT_TRANSLATE,
 		CT_TRIES,
-		CT_DEBLEVEL,
+//		CT_DEBLEVEL,
 		CT_FILEBOX
 	} type;
 	s_cval_entry *data;

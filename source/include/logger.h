@@ -46,6 +46,8 @@ enum { LOG_FILE_DAEMON, LOG_FILE_SESSION, LOG_FILE_DEBUG, LOG_FILE_HISTORY };
 # define D_FREQ		0x0000400L
 # define D_STATEM	0x0000800L
 # define D_DAEMON	0x0001000L
+# define D_24554	0x0002000L
+# define D_FREE 	0x0004000L
 # define D_FULL		0xfffffffL
 #endif
 
@@ -67,13 +69,14 @@ int  log(const char *s, ...);
 int  logerr(const char *s, ...);
 
 #ifdef DEBUG
-void debug_setlevel(long newlevel, bool logit);
+//void debug_setlevel(long newlevel, bool logit);
 bool debug_isopened(void);
-void debug_setfilename(const char *debugname);
-int  debug_parsestring(char *str, unsigned long *deblevel);
-int  debug_open(const char *debugname);
-int  debug_close(void);
-int  debug(unsigned long what, const char *str, ...);
+//void debug_setfilename(const char *debugname);
+//int  debug_parsestring(char *str, unsigned long *deblevel);
+int debug_open();
+int debug_close();
+int debug(unsigned long what, const char *str, ...);
+void debug_configure();
 #endif
 
 #endif

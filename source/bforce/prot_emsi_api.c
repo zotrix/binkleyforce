@@ -24,7 +24,7 @@ void emsi_init(s_handshake_protocol *THIS);
 void emsi_deinit(s_handshake_protocol *THIS);
 int emsi_incoming(s_handshake_protocol *THIS);
 int emsi_outgoing(s_handshake_protocol *THIS);
-s_faddr *emsi_remote_address(s_handshake_protocol *THIS);
+//s_faddr *emsi_remote_address(s_handshake_protocol *THIS);
 char *emsi_remote_password(s_handshake_protocol *THIS);
 char *emsi_remote_sysop_name(s_handshake_protocol *THIS);
 char *emsi_remote_system_name(s_handshake_protocol *THIS);
@@ -33,7 +33,7 @@ char *emsi_remote_phone(s_handshake_protocol *THIS);
 char *emsi_remote_flags(s_handshake_protocol *THIS);
 char *emsi_remote_mailer(s_handshake_protocol *THIS);
 int  emsi_remote_traffic(s_handshake_protocol *THIS, s_traffic *dest);
-s_faddr *emsi_local_address(s_handshake_protocol *THIS);
+//s_faddr *emsi_local_address(s_handshake_protocol *THIS);
 char *emsi_local_password(s_handshake_protocol *THIS);
 
 s_handshake_protocol handshake_protocol_emsi = {
@@ -49,7 +49,7 @@ s_handshake_protocol handshake_protocol_emsi = {
 	emsi_incoming,
 	emsi_outgoing,
 	/* Section 2 */
-	emsi_remote_address,
+//	emsi_remote_address,
 	emsi_remote_password,
 	emsi_remote_sysop_name,
 	emsi_remote_system_name,
@@ -59,7 +59,7 @@ s_handshake_protocol handshake_protocol_emsi = {
 	emsi_remote_mailer,
 	emsi_remote_traffic,
 	/* Section 3 */
-	emsi_local_address,
+//	emsi_local_address,
 	emsi_local_password
 };
 
@@ -151,7 +151,7 @@ int emsi_incoming(s_handshake_protocol *THIS)
 	/*
 	 * Check password(s)
 	 */
-	if( session_addrs_check(remote_emsi->addrs, remote_emsi->anum,
+	if( session_addrs_check(state.remoteaddrs, state.n_remoteaddr,
 				remote_emsi->passwd, NULL, 0) )
 	{
 		rc = HRC_BAD_PASSWD;
@@ -161,7 +161,7 @@ int emsi_incoming(s_handshake_protocol *THIS)
 	else
 	{
 		/* Lock (create BSY) remote addresses */
-		if( session_addrs_lock(remote_emsi->addrs, remote_emsi->anum) )
+		if( session_addrs_lock(state.remoteaddrs, state.n_remoteaddr) )
 		{
 			log("all remote addresses are busy");
 			rc = HRC_BUSY;
@@ -172,7 +172,7 @@ int emsi_incoming(s_handshake_protocol *THIS)
 			 * We know caller's address so we can process
 			 * more expressions and fill state.node structure..
 			 */
-			session_remote_lookup(remote_emsi->addrs, remote_emsi->anum);
+			session_remote_lookup(state.remoteaddrs, state.n_remoteaddr);
 			
 			if( session_check_speed() )
 				rc = HRC_LOW_SPEED;
@@ -219,8 +219,8 @@ int emsi_incoming(s_handshake_protocol *THIS)
 		/*
 		 * Create mail/files queue
 		 */
-		session_create_files_queue(remote_emsi->addrs,
-		                           remote_emsi->anum);
+		session_create_files_queue(state.remoteaddrs,
+		                           state.n_remoteaddr);
 		
 		/*
 		 * Set FREQ processor status
@@ -290,21 +290,21 @@ int emsi_outgoing(s_handshake_protocol *THIS)
 	/*
 	 * Make sure expected address was presented
 	 */
-	if( session_addrs_check_genuine(remote_emsi->addrs,
-				remote_emsi->anum, state.node.addr) )
+	if( session_addrs_check_genuine(state.remoteaddrs,
+				state.n_remoteaddr, state.node.addr) )
 		return HRC_NO_ADDRESS;
 		
 	/*
 	 * Check password(s)
 	 */
-	if( session_addrs_check(remote_emsi->addrs, remote_emsi->anum,
+	if( session_addrs_check(state.remoteaddrs, state.n_remoteaddr,
 				remote_emsi->passwd, NULL, 0) )
 		return HRC_BAD_PASSWD;
 	
 	/*
 	 * Lock (create BSY) remote addresses
 	 */
-	(void)session_addrs_lock(remote_emsi->addrs, remote_emsi->anum);
+	(void)session_addrs_lock(state.remoteaddrs, state.n_remoteaddr);
 	
 	/*
 	 * Set protocol we will use ("options" ignored)
@@ -341,13 +341,12 @@ int emsi_outgoing(s_handshake_protocol *THIS)
 	/*
 	 * Create mail/files queue
 	 */
-	session_create_files_queue(remote_emsi->addrs,
-	                           remote_emsi->anum);
+	session_create_files_queue(state.remoteaddrs, state.n_remoteaddr);
 	
 	return HRC_OK;
 }
 
-s_faddr *emsi_remote_address(s_handshake_protocol *THIS)
+/*s_faddr *emsi_remote_address(s_handshake_protocol *THIS)
 {
 	ASSERT(THIS);
 	ASSERT(THIS->remote_data);
@@ -356,7 +355,7 @@ s_faddr *emsi_remote_address(s_handshake_protocol *THIS)
 		return &((s_emsi *)THIS->remote_data)->addrs[0].addr;
 
 	return NULL;
-}
+} */
 
 char *emsi_remote_password(s_handshake_protocol *THIS)
 {
@@ -456,7 +455,7 @@ int emsi_remote_traffic(s_handshake_protocol *THIS, s_traffic *dest)
 	return -1;
 }
 
-s_faddr *emsi_local_address(s_handshake_protocol *THIS)
+/*s_faddr *emsi_local_address(s_handshake_protocol *THIS)
 {
 	ASSERT(THIS);
 	ASSERT(THIS->local_data);
@@ -465,7 +464,7 @@ s_faddr *emsi_local_address(s_handshake_protocol *THIS)
 		return &((s_emsi *)THIS->local_data)->addrs[0].addr;
 
 	return NULL;
-}
+} */
 
 char *emsi_local_password(s_handshake_protocol *THIS)
 {

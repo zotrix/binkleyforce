@@ -52,8 +52,7 @@ int session_run_command(const char *execstr)
 	
 	if( state.handshake )
 	{
-		if( state.handshake->remote_address
-		 && (addr = state.handshake->remote_address(state.handshake)) )
+		if( addr = session_1remote_address() )
 		{
 			exec_env_add(&eopts, "REM_ADDR_FTN",
 					ftn_addrstr_fido(abuf, *addr));
@@ -61,8 +60,7 @@ int session_run_command(const char *execstr)
 					ftn_addrstr_inet(abuf, *addr));
 		}
 	
-		if( state.handshake->local_address
-		 && (addr = state.handshake->local_address(state.handshake)) )
+		if( addr = session_1local_address() )
 		{
 			exec_env_add(&eopts, "LOC_ADDR_FTN",
 					ftn_addrstr_fido(abuf, *addr));
@@ -166,27 +164,52 @@ void init_state(s_state *pstate)
 
 void deinit_state(s_state *pstate)
 {
-	if( pstate->linename )
-		free(pstate->linename);
-	if( pstate->cidstr )
-		free(pstate->cidstr);
-	if( pstate->peername )
-		free(pstate->peername);
-	if( pstate->connstr )
-		free(pstate->connstr);
-	if( pstate->inbound )
-		free(pstate->inbound);
-	if( pstate->tinbound )
-		free(pstate->tinbound);
-	if( pstate->mailfor )
-		deinit_falist(pstate->mailfor);
-	
+        DEB((D_FREE, "deinit_state begin"));
+
+        DEB((D_FREE, "deinit_state linename"));
+	if (pstate->linename) free(pstate->linename);
+        DEB((D_FREE, "deinit_state cidstr"));
+	if (pstate->cidstr) free(pstate->cidstr);
+        DEB((D_FREE, "deinit_state peername"));
+	if (pstate->peername) free(pstate->peername);
+        DEB((D_FREE, "deinit_state connstr"));
+	if (pstate->connstr) free(pstate->connstr);
+        DEB((D_FREE, "deinit_state inbound"));
+	if (pstate->inbound) free(pstate->inbound);
+        DEB((D_FREE, "deinit_state tinbound"));
+	if (pstate->tinbound) free(pstate->tinbound);
+        DEB((D_FREE, "deinit_state mailfor"));
+	if (pstate->mailfor) deinit_falist(pstate->mailfor);
+
+        DEB((D_FREE, "deinit_state fsqueue"));
 	deinit_fsqueue(&pstate->queue);
 
-	if( state.handshake && state.handshake->deinit )
+        DEB((D_FREE, "deinit_state handshake"));
+	if (state.handshake && state.handshake->deinit) {
 		state.handshake->deinit(state.handshake);
+	}
+
+        DEB((D_FREE, "deinit_state remotedata"));
+	if (pstate->remoteaddrs) free (pstate->remoteaddrs);
+        DEB((D_FREE, "deinit_state localdata"));
+	if (pstate->localaddrs) free (pstate->localaddrs);
 	
 	memset(pstate, '\0', sizeof(s_state));
 
 	pstate->session_rc = -1;
+        DEB((D_FREE, "deinit_state end"));
+}
+
+s_faddr *session_1remote_address()
+{
+	if (state.n_remoteaddr > 0) return &state.remoteaddrs[0].addr;
+
+	return NULL;
+}
+
+s_faddr *session_1local_address()
+{
+	if (state.n_localaddr > 0) return &state.localaddrs[0].addr;
+
+	return NULL;
 }

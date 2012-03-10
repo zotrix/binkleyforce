@@ -20,7 +20,19 @@
 #include "io.h"
 #include "nodelist.h"
 #include "outbound.h"
+
+typedef struct sysaddr {
+	s_faddr addr;
+	bool busy;
+	bool good;
+	int  flags;
+} s_sysaddr;
+
 #include "prot_common.h"
+
+#ifdef NETSPOOL
+#include "netspool.h"
+#endif
 
 typedef enum session {
 	SESSION_UNKNOWN,
@@ -57,13 +69,6 @@ typedef enum reqstat {
 #define HRC_FATAL_ERR   6  /* Any other fatal handshake error            */
 #define HRC_TEMP_ERR    7  /* Any other temporary handshake error        */
 #define HRC_OTHER_ERR   8  /* Any other error (e.g. timeout, NO CARRIER) */
-
-typedef struct sysaddr {
-	s_faddr addr;
-	bool busy;
-	bool good;
-	int  flags;
-} s_sysaddr;
 
 typedef struct {
 	char passwd[128];
@@ -105,7 +110,7 @@ typedef struct handshake_protocol
 	/*
 	 * 2. Remote system information extract methods
 	 */
-	s_faddr* (*remote_address)(struct handshake_protocol *THIS);
+//	s_faddr* (*remote_address)(struct handshake_protocol *THIS);
 	char* (*remote_password)(struct handshake_protocol *THIS);
 	char* (*remote_sysop_name)(struct handshake_protocol *THIS);
 	char* (*remote_system_name)(struct handshake_protocol *THIS);
@@ -118,7 +123,7 @@ typedef struct handshake_protocol
 	/*
 	 * 3. Local system information extract methods
 	 */
-	s_faddr* (*local_address)(struct handshake_protocol *THIS);
+//	s_faddr* (*local_address)(struct handshake_protocol *THIS);
 	char* (*local_password)(struct handshake_protocol *THIS);
 } s_handshake_protocol;
 
@@ -155,6 +160,13 @@ const	s_modemport *modemport;
 	
 	s_falist *mailfor;         /* Remote valid addresses */
 	s_fsqueue queue;           /* Send files queue */
+#ifdef NETSPOOL
+	s_netspool_state netspool;
+#endif
+        s_sysaddr       *remoteaddrs;
+        int             n_remoteaddr;
+        s_sysaddr       *localaddrs;
+        int             n_localaddr;
 };
 typedef struct state s_state;
 
@@ -180,7 +192,8 @@ int   session_init_outgoing();
 int   session_init_incoming();
 
 /* s_main.c */
-extern s_state state;
+extern s_state state; // IF YOU WANT MAKE THIS PROGRAM MULTITHREAD, MAKE THIS VARIBLE LOCAL TO THE THREADS AND PASS IT TO SUBROUTINES
+// YOU SHOULD ADD IT TO ALL FUNCTIONS: IT IS MANY OF HANDWORK BUT EASY TO DO
 
 s_faddr *session_get_bestaka(s_faddr addr);
 int   session_addrs_lock(s_sysaddr *addrs, int anum);
@@ -194,7 +207,7 @@ int   session_check_addr(s_faddr addr);
 int   session_get_password(s_faddr addr, char *buffer, size_t buflen);
 int   session_remote_lookup(s_sysaddr *addrs, int anum);
 void  session_remote_log_status(void);
-int   session_check_password(s_faddr addr, const char *passwd);
+/*int   session_check_password(s_faddr addr, const char *passwd); seems not used*/
 int   session_set_inbound(void);
 void  session_set_freqs_status(void);
 void  session_set_send_options(void);
@@ -205,6 +218,9 @@ int   session_traffic_set_outgoing(s_traffic *dest);
 void  session_traffic(void);
 void  session_update_history(s_traffic *send, s_traffic *recv, int rc);
 int   session(void);
+
+s_faddr* session_1remote_address();
+s_faddr* session_1local_address();
 
 /* sess_call.c */
 int   call_system(s_faddr addr, const s_bforce_opts *opts);

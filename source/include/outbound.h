@@ -27,6 +27,7 @@
 #define ACTION_UNLINK		0x001	/* Unlink file if send successful    */
 #define ACTION_TRUNCATE		0x002	/* Truncate file if send successful  */
 #define ACTION_FORCEUNLINK	0x004	/* Unlink file in any case after ses.*/
+#define ACTION_ACKNOWLEDGE	0x008 	/* Report success to netspool server */
 
 #define TYPE_UNKNOWN		0x000
 #define TYPE_NETMAIL		0x001
