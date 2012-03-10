@@ -41,7 +41,7 @@ int answ_system(e_session type, char *connstr, int inetd)
 		state.inet = TRUE;
 	}
 	else
-		state.linename = isatty(0) ? port_get_name(ttyname(0)) : "tcpip";
+		state.linename = isatty(0) ? port_get_name(ttyname(0)) : xstrcpy("tcpip");
 	
 	if( !inetd )
 	{

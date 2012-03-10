@@ -480,10 +480,10 @@ exit:
 	
 	/* Shutdown logging services */
 	if( log_isopened() ) log_close();
+        DEB((D_FREE, "good exit"));
 #ifdef DEBUG
 	if( debug_isopened() ) debug_close();
 #endif
-        DEB((D_FREE, "good exit"));
 	exit(rc);
 }
 
