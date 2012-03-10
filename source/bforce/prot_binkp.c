@@ -839,8 +839,11 @@ case BPMSG_EOB:              /* End Of Batch (data ignored) */
             return 1; // continue receiving as M_GOT may and would arrive
 
 case BPMSG_GOT:              /* File received */
+            DEB((D_24554, "received M_GOT len=%d", block_length));
+            goto got_skip;
 case BPMSG_SKIP:
-            DEB((D_24554, "received GOT/SKIP len=%d", block_length));
+            DEB((D_24554, "received M_SKIP len=%d", block_length));
+got_skip:
             if (bstate->mode != bmode_transfer) {
                 PROTO_ERROR("unexpected M_GOT/M_SKIP");
             }
