@@ -40,14 +40,21 @@ const char *Protocols[] =
  * Return value:
  * 	Zero value on success and non-zero if nothing to send
  */
-static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_fsqueue *q)
+
+static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 {
+        DEB((D_OUTBOUND, "prot_get_next_file")); // %s %d", hint->fn, hint->sz);
 	s_filelist *ptrl = NULL;
 	s_filelist *best = NULL;
+	s_fsqueue *q = &state.queue;
+        s_filehint *hint = NULL; // M_GET hinting does not work good here as it spec net_name and it is unknown here (especially for PKTs)
 
 	*dest = NULL;
-	
-	for( ptrl = q->fslist; ptrl; ptrl = ptrl->next )
+
+	/* local queue */
+	for( ptrl = q->fslist; ptrl; ptrl = ptrl->next ) {
+	        //DEB((D_OUTBOUND, "scan %s", ptrl->fname));
+	        if (hint) if (strcmp(hint->fn, ptrl->fname) !=0 || hint->sz != ptrl->size) continue;
 		if( ptrl->status == STATUS_WILLSEND )
 		{
 			if( pi->reqs_only )
@@ -83,6 +90,8 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_fsqueue *q)
 			else
 				best = ptrl;
 		}
+	}
+	//DEB((D_OUTBOUND, log("scan1 done");
 	
 	if( best )
 	{
@@ -90,13 +99,99 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi, s_fsqueue *q)
 		return 0;
 	}
 	
-	for( ptrl = pi->filelist; ptrl; ptrl = ptrl->next )
+	for( ptrl = pi->filelist; ptrl; ptrl = ptrl->next ) {
+	        if (hint) if (strcmp(hint->fn, ptrl->fname) !=0 || hint->sz != ptrl->size) continue;
 		if( ptrl->status == STATUS_WILLSEND )
 		{
 			*dest = ptrl;
 			return 0;
 		}
+	}
+	//DEB((D_OUTBOUND, log("scan2 done");
 	
+	/* network queue */
+#ifdef NETSPOOL
+
+        if (hint) return 1; // cannot choose
+
+	/*DEB((D_OUTBOUND, log("netspool next file");*/
+	if(state.netspool.state == NS_NOTINIT) {
+	    /*DEB((D_OUTBOUND, log("new netspool connection");*/
+#define ADDRBUF 3000
+#define SMALLBUF 128
+	    char password[SMALLBUF];
+	    char address[SMALLBUF];
+	    char addresses[ADDRBUF];
+	    int i, pos, alen;
+	    char *host = conf_string(cf_netspool_host);
+	    char *port = conf_string(cf_netspool_port);
+	    if(host==NULL) {
+		//DEB((D_OUTBOUND, log("netspool is not configured");
+	        state.netspool.state = NS_UNCONF;
+	    } else {
+	        if (state.n_remoteaddr==0) {
+	            log("cannot start netspool: list of remote addresses has zero length");
+	            return -1;
+	        }
+	        for(i=0, pos=0; i<state.n_remoteaddr; i++) {
+	            alen=snprintf(address, SMALLBUF, state.remoteaddrs[i].addr.point? "%d:%d/%d.%d": "%d:%d/%d",
+                        state.remoteaddrs[i].addr.zone, state.remoteaddrs[i].addr.net,
+                        state.remoteaddrs[i].addr.node, state.remoteaddrs[i].addr.point);
+	            if (!state.remoteaddrs[i].good) {
+	                log("ignoring addr %s", address);
+	                continue;
+	            }
+	            if (pos+alen+1 > ADDRBUF-1) { // space for zero length string as end marker
+	                log("no buffer space for address %s", address);
+	                break;
+	            }
+	            DEB((D_OUTBOUND, "add address %s", address));
+	            memcpy (addresses+pos, address, alen);
+	            pos += alen;
+	            addresses[pos++] = 0;
+	        }
+	        addresses[pos++] = 0;
+
+		if(state.protected) {
+		    session_get_password(state.remoteaddrs[0].addr, password, SMALLBUF);
+		} else {
+		    password[0] = 0;
+		}
+		log("netspool start %s %s", host, port);
+		netspool_start(&state.netspool, host, port, addresses, password);
+	    }
+	}
+
+	if(state.netspool.state == NS_READY) {
+	    /*DEB((D_OUTBOUND, log("netspool request");*/
+	    netspool_query(&state.netspool, "ALL");
+	}
+
+	if(state.netspool.state == NS_RECEIVING) {
+	    //DEB((D_OUTBOUND, log("netspool begin receive");
+	    netspool_receive(&state.netspool);
+	} else {
+	    //DEB((D_OUTBOUND, log("netspool could not start receive");
+	    return 1;
+	}
+
+	if(state.netspool.state == NS_RECVFILE) {
+	    /*DEB((D_OUTBOUND, log("netspool start file");*/
+	    *dest = NULL;
+	    return 0;
+	}
+
+	if(state.netspool.state == NS_READY) {
+	    //DEB((D_OUTBOUND, log("netspool queue empty");
+	    netspool_end(&state.netspool);
+	}
+
+	if(state.netspool.state==NS_ERROR) {
+	    log("netspool error %s", state.netspool.error);
+	}
+
+#endif
+
 	return 1;
 }
 
@@ -149,7 +244,7 @@ void prot_update_traffic(s_protinfo *pi, const s_fsqueue *q)
  * Return value:
  * 	Zero value on success and non-zero if have nothing to send
  */
-int p_tx_fopen(s_protinfo *pi)
+int p_tx_fopen(s_protinfo *pi, s_filehint *hint)
 {
 	FILE *fp;
 	struct stat st;
@@ -157,50 +252,90 @@ int p_tx_fopen(s_protinfo *pi)
 
 	if( state.sopts.holdall )
 		return 1;
+		
+	if (hint) {
+	    DEB((D_OUTBOUND, "trying to reopen file %s size %d time %d", hint->fn, hint->sz, hint->tm));
+	    int i;
+	    for (i=0; i++; i<pi->n_sentfiles) {
+	        DEB((D_OUTBOUND, "check %s %d %d", pi->sentfiles[i].net_name, pi->sentfiles[i].bytes_total, pi->sentfiles[i].mod_time));
+	        if (strcmp(pi->sentfiles[i].net_name, hint->fn)==0) {
+	            DEB((D_OUTBOUND, "name match"));
+	            if (pi->sentfiles[i].bytes_total == hint->sz) {
+	                DEB((D_OUTBOUND, "size match"));
+	                if (pi->sentfiles[i].mod_time == hint->tm) {
+	                    DEB((D_OUTBOUND, "time match"));
+	                    if (!pi->sentfiles[i].fp) {
+	                        DEB((D_OUTBOUND, "already closed"));
+	                        return -1;
+	                    }
+	                    pi->send = pi->sentfiles + i;
+	                    pi->send->eofseen = FALSE;
+                            pi->send->status = FSTAT_PROCESS;
+                            DEB((D_OUTBOUND, "reopened %s", pi->send->fname));
+	                    return 0;
+	                }
+	            }
+	        }
+	    }
+	    DEB((D_OUTBOUND, "no file for this hint"));
+	    return -1;
+	}
 
 get_next_file:
-	if( prot_get_next_file(&ptrl, pi, &state.queue) || !ptrl )
-		return 1;
+	if( prot_get_next_file(&ptrl, pi) ) {
+	    DEB((D_OUTBOUND, "no next file"));
+	    return 1;
+        }
+        
+	if( ptrl ) {
 	
-	/* Mark this file as "processed" */
-	ptrl->status = STATUS_SENDING;
+	    DEB((D_OUTBOUND, "sending local file"));
+	    /* Mark this file as "processed" */
+	    ptrl->status = STATUS_SENDING;
 
-	pi->send_left_num  -= 1;
-	pi->send_left_size -= ptrl->size;
+	    pi->send_left_num  -= 1;
+	    pi->send_left_size -= ptrl->size;
 	
-	if( pi->send_left_size < 0 )
+	    if( pi->send_left_size < 0 )
 		pi->send_left_size = 0;
-	if( pi->send_left_num < 0 )
+	    if( pi->send_left_num < 0 )
 		pi->send_left_num = 0;
+
+	    DEB((D_PROT, "p_tx_fopen: now opening \"%s\"", ptrl->fname));
 	
-	/* Reset MinCPS time counter */
-	pi->tx_low_cps_time = 0;
-	
-	DEB((D_PROT, "p_tx_fopen: now opening \"%s\"", ptrl->fname));
-	
-	if( stat(ptrl->fname, &st) )
-	{
+	    if( stat(ptrl->fname, &st) ) {
 		logerr("send: cannot stat file \"%s\"", ptrl->fname);
 		goto get_next_file;
-	}
+	    }
 	
-	if( (fp = file_open(ptrl->fname, "r")) == NULL )
-	{
+	    if( (fp = file_open(ptrl->fname, "r")) == NULL ) {
 		logerr("send: cannot open file \"%s\"", ptrl->fname);
 		goto get_next_file;
+	    }
+
 	}
+#ifndef NETSPOOL
+	else {
+	    return 1;
+	}
+#endif
+
+	/* Reset MinCPS time counter */
+	pi->tx_low_cps_time = 0;
 
 	/*
 	 * Add new entry to the send files queue
 	 */
 	if( pi->sentfiles && pi->n_sentfiles > 0 )
 	{
+	        DEB((D_OUTBOUND, "adding file to sentfile"));
 		pi->sentfiles = (s_finfo *)xrealloc(pi->sentfiles, sizeof(s_finfo)*(pi->n_sentfiles+1));
 		memset(&pi->sentfiles[pi->n_sentfiles], '\0', sizeof(s_finfo));
 		pi->send = &pi->sentfiles[pi->n_sentfiles++];
 	}
 	else
 	{
+	        DEB((D_OUTBOUND, "adding file to new sentfile"));
 		pi->sentfiles = (s_finfo *)xmalloc(sizeof(s_finfo));
 		memset(pi->sentfiles, '\0', sizeof(s_finfo));
 		pi->send = pi->sentfiles;
@@ -210,6 +345,27 @@ get_next_file:
 	/*
 	 * Set file information
 	 */
+#ifdef NETSPOOL
+	if( !ptrl ) {
+	    /* send file received through netspool */
+	pi->send->fp          = 0;
+	pi->send->local_name  = (char*)xstrcpy("NETSPOOL");
+	pi->send->type        = out_filetype(state.netspool.filename);
+	pi->send->net_name    = recode_file_out(p_convfilename(state.netspool.filename, pi->send->type));
+	pi->send->fname       = NULL;
+	pi->send->mod_time    = time(NULL);
+	pi->send->mode        = 0664;
+	pi->send->bytes_total = state.netspool.length;
+	pi->send->start_time  = time(NULL);
+	pi->send->eofseen     = FALSE;
+	pi->send->status      = FSTAT_PROCESS;
+	pi->send->action      = ACTION_ACKNOWLEDGE;
+	pi->send->flodsc      = -1;
+	pi->send->waitack     = true;
+	pi->send->netspool    = true;
+	} else {
+
+#endif
 	pi->send->fp          = fp;
 	pi->send->local_name  = (char*)xstrcpy(file_getname(ptrl->fname));
 	pi->send->net_name    = recode_file_out(p_convfilename(pi->send->local_name, ptrl->type));
@@ -225,7 +381,12 @@ get_next_file:
 	pi->send->type        = ptrl->type;
 	pi->send->action      = ptrl->action;
 	pi->send->flodsc      = ptrl->flodsc;
-	
+	pi->send->waitack     = false;
+	pi->send->netspool    = false;
+#ifdef NETSPOOL
+	}
+#endif
+
 	if( strcmp(pi->send->local_name, pi->send->net_name) == 0 )
 	{
 		log("send: \"%s\" %d bytes",
@@ -241,6 +402,15 @@ get_next_file:
 	}
 
 	return 0;
+}
+
+int p_tx_rewind(s_protinfo *pi, size_t pos)
+{
+    if( !pi || !pi->send || !pi->send->fp) {
+        DEB((D_OUTBOUND, "cannot rewind"));
+        return -1;
+    }
+    return fseek(pi->send->fp, pos, SEEK_SET);
 }
 
 void prot_traffic_update(s_traffic *traf, size_t size, int xtime, int type)
@@ -297,6 +467,11 @@ int p_tx_fclose(s_protinfo *pi)
 {
 	long trans_time = 0;
 	long cps = 0;
+	
+	if (!pi->send) {
+	    DEB((D_OUTBOUND, "already closed"));
+	    return -1;
+	}
 	
 	if( pi->send->fp )
 	{
@@ -364,8 +539,16 @@ int p_tx_fclose(s_protinfo *pi)
 			else if( errno != ENOENT )
 				logerr("send: cannot truncate file \"%s\"", pi->send->fname);
 			break;
+#ifdef NETSPOOL
+		case ACTION_ACKNOWLEDGE:
+			DEB((D_OUTBOUND, "netspool commit %s", state.netspool.filename));
+			netspool_acknowledge(&state.netspool);
+			break;
+#endif
 		}
 	}
+	
+	pi->send = NULL;
 	
 	return 0;
 }
@@ -383,12 +566,33 @@ int p_tx_fclose(s_protinfo *pi)
  * 	  -1 - error reading file (must try to send file later)
  * 	  -2 - file must be skipped (send never)
  */
-int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
+long int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
 {
 	int n;
 	struct stat st;
 	long ftell_pos;
 
+#ifdef NETSPOOL
+	if (pi->send->netspool) {
+	    /*DEB((D_OUTBOUND, log("reading netspool file");*/
+	    if( state.netspool.state != NS_RECVFILE ) {
+		log("send: wrong netspool state");
+		pi->send->status = FSTAT_SKIPPED;
+		return -2;
+	    }
+	    n = netspool_read(&state.netspool, buffer, buflen);
+	    pi->send->eofseen = state.netspool.length == 0;
+	    if( n==-1 ) {
+		log("send: netspool error %s", state.netspool.error);
+		pi->send->status = FSTAT_SKIPPED;
+		return -2;
+	    }
+	    /*DEB((D_OUTBOUND, log("got %d bytes from netspool", n);*/
+	    return n;
+	} else {
+	    /*DEB((D_OUTBOUND, log("reading local file");*/
+	}
+#endif
 	/*
 	 * Sanity check: read from closed file.
 	 */
@@ -459,7 +663,7 @@ int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
  * 	-1 - error writing file (receive later)
  * 	-2 - file must be skipped (receive never)
  */
-int p_rx_writefile(const char *buffer, size_t buflen, s_protinfo *pi)
+long int p_rx_writefile(const char *buffer, size_t buflen, s_protinfo *pi)
 {
 	struct stat st;
 	long ftell_pos = ftell(pi->recv->fp);
@@ -545,7 +749,9 @@ static int p_move2inbound(s_protinfo *pi)
 		{
 			log("recv: cannot get unique name for \"%s\"",
 				pi->recv->local_name);
+			DEB((D_FREE, "free realname"));
 			free(realname);
+			DEB((D_FREE, "freed"));
 			return 1;
 		}
 
@@ -592,10 +798,16 @@ static int p_move2inbound(s_protinfo *pi)
 				destname);
 	}
 	
-	if( realname )
+	if( realname ) {
+	        DEB((D_FREE, "free realname"));
 		free(realname);
-	if( uniqname )
+		DEB((D_FREE, "freed"));
+	}
+	if( uniqname ) {
+	        DEB((D_FREE, "free uniqname"));
 		free(uniqname);
+		DEB((D_FREE, "freed"));
+	}
 	
 	return rc ? 1 : 0;
 }
@@ -776,12 +988,13 @@ int p_rx_fopen(s_protinfo *pi, char *fn, size_t sz, time_t tm, mode_t mode)
 			if( pi->recv->mod_time == localtogmt(st.st_mtime)
 			 && pi->recv->bytes_total == st.st_size )
 			{
-				log("recv: allready have \"%s\"", fname);
+				log("recv: already have \"%s\"", fname);
 				pi->recv->status = FSTAT_SKIPPED;
 			}
 		}
-	
+	        DEB((D_FREE, "free fname"));
 		free(fname); fname = NULL;
+		DEB((D_FREE, "freed"));
 		
 		if( pi->recv->status == FSTAT_SKIPPED )
 			return 2;
@@ -802,15 +1015,17 @@ int p_rx_fopen(s_protinfo *pi, char *fn, size_t sz, time_t tm, mode_t mode)
 				 * directory, do you know who could left it here ? :)
 				 */
 				
-				log("recv: allready have \"%s\"", pi->recv->fname);
+				log("recv: already have \"%s\"", pi->recv->fname);
 				
 				if( p_move2inbound(pi) == 0 )
 					pi->recv->status = FSTAT_SKIPPED;
 				else	
 					pi->recv->status = FSTAT_REFUSED;
 				
+				DEB((D_FREE, "free pi->recv->fname"));
 				free(pi->recv->fname);
 				pi->recv->fname = NULL;
+				DEB((D_FREE, "freed"));
 				
 				return pi->recv->status == FSTAT_SKIPPED ? 2 : 1;
 			}
@@ -849,8 +1064,10 @@ int p_rx_fopen(s_protinfo *pi, char *fn, size_t sz, time_t tm, mode_t mode)
 		logerr("recv: cannot open \"%s\" -> refuse", pi->recv->fname);
 		
 		pi->recv->status = FSTAT_REFUSED;
+		DEB((D_FREE, "p_rx_open free"));
 		free(pi->recv->fname);
 		pi->recv->fname = NULL;
+		DEB((D_FREE, "p_rx_open ok"));
 		
 		return 1;
 	}
@@ -1183,6 +1400,13 @@ void p_session_cleanup(s_protinfo *pi, bool success)
 				logerr("cannot unlink temporary file \"%s\"", ptrl->fname);
 		}
 	}
+	
+#ifdef NETSPOOL
+	if(state.netspool.state==NS_ERROR) {
+	    log("end session: netspool error %s", state.netspool.error);
+	}
+	/*netspool_end(&state.netspool);*/
+#endif
 }
 
 /*****************************************************************************
@@ -1373,8 +1597,10 @@ char *prot_unique_name(char *dirname, char *fname, int type)
 				*p = 'A';
 			else if( --p < result || *p == '.' || *p == '/' )
 			{
+			        DEB((D_FREE, "free result"));
 				free(result);
 				result = NULL;
+				DEB((D_FREE, "result ok"));
 				break;
 			}
 		}
@@ -1405,8 +1631,11 @@ char *prot_unique_name(char *dirname, char *fname, int type)
 	
 	if( try >= MAX_TRIES )
 	{
-		if( result )
+		if( result ) {
+		        DEB((D_FREE, "free result"));
 			free(result);
+			DEB((D_FREE, "result ok"));
+		}
 		
 		return NULL;
 	}
@@ -1425,6 +1654,7 @@ char *prot_unique_name(char *dirname, char *fname, int type)
  */
 void deinit_finfo(s_finfo *fi)
 {
+        DEB((D_FREE, "deinit_finfo"));
 	if( fi->fp )
 		fclose(fi->fp);
 	
@@ -1436,6 +1666,7 @@ void deinit_finfo(s_finfo *fi)
 		free(fi->fname);
 	
 	memset(fi, '\0', sizeof(s_finfo));
+        DEB((D_FREE, "deinit_finfo end"));
 }
 
 /*****************************************************************************
@@ -1553,6 +1784,7 @@ void init_protinfo(s_protinfo *pi, bool caller)
 void deinit_protinfo(s_protinfo *pi)
 {
 	int i;
+	DEB((D_FREE, "deinit_protinfo"));
 	
 	for( i = 0; i < pi->n_sentfiles; i++ )
 		deinit_finfo(&pi->sentfiles[i]);
@@ -1568,4 +1800,5 @@ void deinit_protinfo(s_protinfo *pi)
 		free(pi->rcvdfiles);
 	
 	memset(pi, '\0', sizeof(s_protinfo));
+	DEB((D_FREE, "deinit_protinfo end"));
 }

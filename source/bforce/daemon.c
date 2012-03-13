@@ -914,10 +914,6 @@ int daemon_run(const char *confname, const char *incname, bool quit)
 				return BFERR_FATALERROR;
 			}
 
-#ifdef DEBUG
-			(void)debug_setfilename(log_getfilename(LOG_FILE_DEBUG));
-#endif
-
 			log("%sstarting daemon (%s)",
 				started ? "re" : "", BF_VERSION);
 

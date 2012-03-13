@@ -163,19 +163,25 @@ s_conf_entry bforce_config[BFORCE_NUMBER_OF_KEYWORDS+1] = {
 	CONF_KEY(zmodem_mincps_send,         CT_CONNLIST),
 	CONF_KEY(zmodem_send_dummy_pkt,      CT_BOOLEAN),
 	CONF_KEY(zmodem_skip_by_pos,         CT_BOOLEAN),
-	CONF_KEY(zmodem_start_block_size,    CT_NUMBER),
-	CONF_KEY(zmodem_tx_window,           CT_NUMBER),
-	CONF_KEY(nomail_flag,                CT_STRING),
-	CONF_KEY(bind_ip,                    CT_STRING),
-	CONF_KEY(recieved_to_lower,          CT_BOOLEAN),
+	CONF_KEY(zmodem_start_block_size,	CT_NUMBER),
+	CONF_KEY(zmodem_tx_window,		CT_NUMBER),
+	CONF_KEY(nomail_flag,			CT_STRING),
+	CONF_KEY(bind_ip,			CT_STRING),
+	CONF_KEY(recieved_to_lower,		CT_BOOLEAN),
 #ifdef USE_SYSLOG
-	CONF_KEY(syslog_facility,            CT_NUMBER),
+	CONF_KEY(syslog_facility,		CT_NUMBER),
 #endif
 #ifdef DEBUG
-	CONF_KEY(debug_file,                 CT_STRING),
-	CONF_KEY(debug_level,                CT_DEBLEVEL),
+	CONF_KEY(debug_file,			CT_STRING),
+	CONF_KEY(debug_level,			CT_STRING),
 #endif
-	CONF_KEY(split_inbound,                CT_BOOLEAN),
+	CONF_KEY(split_inbound,			CT_BOOLEAN),
+#ifdef NETSPOOL
+        CONF_KEY(netspool_host,			CT_STRING),
+        CONF_KEY(netspool_port,			CT_STRING),
+#endif
+        CONF_KEY(fidodnszone,			CT_STRING),
+
 	CONF_END()
 };
 
@@ -195,9 +201,9 @@ static int proc_dialresp(s_dialresp *dest, char *value);
 static int proc_translate(s_translate *dest, char *value);
 static int proc_speeddep(s_connlist *dest, char *value);
 static int proc_tries(s_tries *dest, char *value);
-#ifdef DEBUG
-static int proc_debuglevel(s_number *dest, char *value);
-#endif
+//#ifdef DEBUG
+//static int proc_debuglevel(s_number *dest, char *value); move to reader
+//#endif
 static int proc_filebox(s_filebox *dest, char *value);
 
 static int append_config_entry(s_conf_entry *conf_ent, s_cval_entry *cval_entry)
@@ -286,11 +292,11 @@ int proc_configline(const char *k, const char *e, const char *v)
 		case CT_TRIES:
 			rc = proc_tries(&temp_value.d.tries, copy);
 			break;
-#ifdef DEBUG
-		case CT_DEBLEVEL:
-			rc = proc_debuglevel(&temp_value.d.number, copy);
-			break;
-#endif
+//#ifdef DEBUG
+//		case CT_DEBLEVEL:
+//			rc = proc_debuglevel(&temp_value.d.number, copy);
+//			break;
+//#endif
 		case CT_FILEBOX:
 			rc = proc_filebox(&temp_value.d.filebox, copy);
 			break;
@@ -927,7 +933,7 @@ static int proc_tries(s_tries *dest, char *value)
  *  Line format: DebugLevel <Level> [<Level>]..
  */
 #ifdef DEBUG
-static int proc_debuglevel(s_number *dest, char *value)
+/*static int proc_debuglevel(s_number *dest, char *value)
 {
 	int rc = PROC_RC_OK;
 	long deblevel = 0L;
@@ -939,7 +945,7 @@ static int proc_debuglevel(s_number *dest, char *value)
 	dest->num = deblevel;
 
 	return(rc);
-}
+} */
 #endif
 
 /*

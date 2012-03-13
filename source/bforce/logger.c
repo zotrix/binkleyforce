@@ -32,7 +32,7 @@ static char  log_ttyname[32] = "";
  * Local variables needed to make debug work
  */
 static FILE *debug_fp = NULL;
-static long  debug_current_debuglevel = 0L;
+static long  debug_current_debuglevel = BFORCE_DEBLEVEL;
 static char  debug_name[BF_MAXPATH+1] = BFORCE_DEBFILE;
 static bool  debug_invalid_name = FALSE;
 
@@ -56,6 +56,9 @@ struct debuglevel {
 	{ "Freq",     D_FREQ     },
 	{ "Statem",   D_STATEM   },
 	{ "Daemon",   D_DAEMON   },
+	{ "Free",     D_FREE     },
+	{ "24554",    D_24554    },
+//	{ "Daemon",   D_DAEMON   },
 	{ "Full",     D_FULL     },
 	{ NULL,       0          }
 };
@@ -103,11 +106,6 @@ int log_open(const char *logname, const char *ext, const char *tty)
 	
 	if( logname )
 	{
-		/* Reset previous settings */
-		*log_name = '\0';
-		*log_extension = '\0';
-		*log_ttyname = '\0';
-		
 		strnxcpy(log_name, logname, sizeof(log_name));
 		
 		if( tty && *tty )
@@ -119,14 +117,9 @@ int log_open(const char *logname, const char *ext, const char *tty)
 			strnxcat(log_name, ".", sizeof(log_name));
 			strnxcat(log_name, ext, sizeof(log_name));
 		}
-		
-		if( (log_fp = fopen(log_name, "a")) == NULL )
-		{
-			logerr("can't open log file \"%s\"", log_name);
-			return -1;
-		}
 	}
-	else if( log_name )
+	
+	if( log_name )
 	{
 		/* Open previously set log file */
 			
@@ -385,28 +378,16 @@ int logerr(const char *s, ...)
 
 
 #ifdef DEBUG
-void debug_setlevel(long newlevel, bool logit)
-{
-	if( logit && newlevel != debug_current_debuglevel )
-	{
-		log("changing debug level from 0x%07x to 0x%07x",
-			debug_current_debuglevel, newlevel);
-		debug_current_debuglevel = newlevel;
-	}
-}
-
-bool debug_isopened(void)
-{
-	return debug_fp ? TRUE : FALSE;
-}
-
-int debug_parsestring(char *str, unsigned long *deblevel)
+int _debug_parsestring(char *str, unsigned long *deblevel)
 {
 	int i, rc = 0;
 	char *n;
 	char *p_str = NULL;
 
-	ASSERT(str != NULL);
+	if (str==NULL) {
+	    puts("DEBUG level string is empty, please configure");
+	    exit(-1);
+	}
 	
 	*deblevel = 0L;
 	
@@ -427,42 +408,73 @@ int debug_parsestring(char *str, unsigned long *deblevel)
 			rc = 1;
 		}
 	}
-	return rc;	
+	return rc;
 }
 
-void debug_setfilename(const char *debugname)
+void debug_configure() // this function should be called after configuration is settled
 {
-	ASSERT(debugname != NULL);
+    char *debugfile = conf_string(cf_debug_file);
+    char *debuglevel =  conf_string(cf_debug_level);
+    unsigned long n_debuglevel;
+
+    if (debugfile!=NULL) {
+	if( strcmp(debug_name, debugfile)!=0 ) {
 	
-	if( !strcmp(debug_name, debugname) ) return;
-	
-	if( debug_isopened() ) debug_close();
+            if( debug_isopened() ) debug_close();
 	
 	/* Reset ignore flag */
-	if( debug_invalid_name )
+	    if( debug_invalid_name )
 		debug_invalid_name = FALSE;
 	
-	strnxcpy(debug_name, debugname, sizeof(debug_name));
+	    strncpy(debug_name, debugfile, sizeof(debug_name));
+	}
+    }
+
+    _debug_parsestring(debuglevel, &n_debuglevel);
+
+    if( n_debuglevel != debug_current_debuglevel ) {
+		log("changing debug level from 0x%08x to 0x%08x",
+			debug_current_debuglevel, n_debuglevel);
+		debug_current_debuglevel = n_debuglevel;
+    }
 }
 
-int debug_open(const char *debugname)
+bool debug_isopened(void)
+{
+	return debug_fp ? TRUE : FALSE;
+}
+
+int debug_open()
 {
 	char buf[40];
 
 	ASSERT(debug_fp == NULL);
 
-	if( debugname )
+	if( debug_name )
 	{
-		if( (debug_fp = fopen(debugname, "a")) == NULL )
-		{
-			logerr("can't open debug file \"%s\"", debugname);
-			return -1;
+
+                char log_name[PATH_MAX];
+	        char *marker;
+		/* Reset previous settings */
+		*log_name = '\0';
+		*log_extension = '\0';
+		*log_ttyname = '\0';
+		
+		if (marker = strchr(debug_name, '!')) {
+		    struct timespec xtm;
+		    struct tm btm;
+		    clock_gettime(CLOCK_REALTIME, &xtm);
+		    gmtime_r(&xtm.tv_sec, &btm);
+		    // hope sysop will not DoS his own node
+		    memcpy(log_name, debug_name, marker-debug_name);
+		    sprintf( log_name + (marker-debug_name) + strftime(log_name + (marker-debug_name), 100, ".%Y-%m-%d.%H.%M.%S.", &btm), "%09ld.%s", xtm.tv_nsec, marker+1);
+		    // I'm too lazy to add variable
+		} 
+		else {
+		    strcpy(log_name, debug_name);
 		}
-		strnxcpy(debug_name, debugname, sizeof(debug_name));
-	}
-	else if( debug_name )
-	{
-		if( (debug_fp = fopen(debug_name, "a")) == NULL )
+
+		if( (debug_fp = fopen(log_name, "a")) == NULL )
 		{
 			/* Don't try to open it next time */
 			debug_invalid_name = TRUE;
@@ -502,7 +514,7 @@ int debug_close(void)
 		rc = fclose(debug_fp) ? 0 : -1;	debug_fp = NULL;
 	}
 	
-	return rc;	
+	return rc;
 }
 
 int debug(unsigned long what, const char *str, ...)
@@ -515,7 +527,7 @@ int debug(unsigned long what, const char *str, ...)
 	{
 		if( debug_fp == NULL && debug_invalid_name == FALSE )
 		{
-			debug_open(NULL);
+			debug_open();
 		}
 		
 		if( debug_fp )

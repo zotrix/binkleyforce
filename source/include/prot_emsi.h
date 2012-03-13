@@ -143,8 +143,8 @@ struct emsi
 	 * {EMSI_DAT} (main handshake information)
 	 */ 
 	bool        have_emsi;
-	s_sysaddr  *addrs;		 /* dynamicaly allocated array       */
-	int         anum;		 /* number of used entries in it     */
+//	s_sysaddr  *addrs;		 /* dynamicaly allocated array       */
+//	int         anum;		 /* number of used entries in it     */
 	char        passwd[EMSI_MAXPASSWD+1];
 	s_linkcodes linkcodes;		/* XXn linkcodes contained in eaddr  */
 	s_compcodes compcodes;

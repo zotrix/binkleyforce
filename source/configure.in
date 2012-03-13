@@ -3,7 +3,7 @@ dnl
 dnl $Id$
 dnl
 #AC_INIT(bforce/bforce.c)
-AC_INIT([bforce],[0.22.9],[e.kozhuhovskiy@gmail.com])
+AC_INIT([bforce],[0.24],[sergey@fidoman.ru])
 AC_CONFIG_HEADER(include/config.h)
 AC_CANONICAL_SYSTEM
 dnl # Minimum Autoconf version required.
@@ -81,6 +81,11 @@ AC_ARG_ENABLE(syslog,       [ --enable-syslog		use syslog for logging [experimen
 	[if test $enableval = yes; then
 		AC_DEFINE([USE_SYSLOG], [1], [Use syslog for logging])
 	fi], [AC_DEFINE([USE_SYSLOG], [1], [Use syslog for logging])])
+
+AC_ARG_ENABLE(netspool,       [ --enable-netspool		network attached inbound/outbound],
+	[if test $enableval = yes; then
+		AC_DEFINE([NETSPOOL], [1], [Use netspool])
+	fi], [AC_DEFINE([NETSPOOL], [1], [Use netspool])])
 
 AC_ARG_ENABLE(buggy_emsi,   [ --disable-buggy-emsi	disable buggy emsi support (default)],
 	[if test $enableval = yes; then

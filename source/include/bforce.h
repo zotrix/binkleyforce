@@ -14,22 +14,6 @@
 #ifndef _BFORCE_H_
 #define _BFORCE_H_
 
-#ifndef DAEMON_LOGFILE
-#define DAEMON_LOGFILE "/var/log/bforce/bf-daemon"
-#endif
-
-#ifndef BFORCE_LOGFILE
-#define BFORCE_LOGFILE "/var/log/bforce/bf-log"
-#endif
-
-#ifndef BFORCE_DEBFILE
-#define BFORCE_DEBFILE "/var/log/bforce/bf-debug"
-#endif
-
-#ifndef BFORCE_CFGFILE
-#define BFORCE_CFGFILE "/etc/bforce/bforce.conf"
-#endif
-
 /*
  * BinkleyForce limits
  */
@@ -38,9 +22,6 @@
 #define BF_MAXPATH		256
 #define BF_MAXDOMAIN		40
 #define BF_MAXADDRSTR		80
-
-/* IP-only nodes phone */
-#define NO_PSTN_PHONE "00-00-000000"
 
 /*
  * Maximum length of file name (without path)
@@ -154,7 +135,6 @@
 /*
  *  Definition of new pretty types
  */
-typedef char            bool;
 typedef unsigned long   UINT32;
 typedef unsigned short  UINT16;
 typedef unsigned char   UINT8;
