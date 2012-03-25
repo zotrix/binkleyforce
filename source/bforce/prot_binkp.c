@@ -534,6 +534,7 @@ case 4:
                     buf[0] = BPMSG_FILE;
                     *block_length = 1+sprintf(buf+1, "%s %ld %ld -1", bstate->pi->send->net_name, 
                             (long)bstate->pi->send->bytes_total, (long)bstate->pi->send->mod_time);
+                    DEB((D_24554, "M_FILE: %s", buf+1));
                     *block_type = BINKP_BLK_CMD;
                     return 3; // no state change. phase would be changed to 1 by recv when M_GET is received
                 }
@@ -544,6 +545,7 @@ case 4:
                 buf[0] = BPMSG_FILE;
                 *block_length = 1+sprintf(buf+1, "%s %ld %ld 0", bstate->pi->send->net_name, 
                         bstate->pi->send->bytes_total, bstate->pi->send->mod_time);
+                DEB((D_24554, "M_FILE: %s", buf+1));
                 *block_type = BINKP_BLK_CMD;
                 bstate->phase += 1;
                 return 1;
@@ -852,6 +854,8 @@ got_skip:
 	    if (binkp_parsfinfo (buf+1, &fi, false)) {
 	        PROTO_ERROR("error parsing M_GOT/M_SKIP");
 	    }
+
+            DEB((D_24554, "params: fn=%s sz=%d tm=%d", fi.fn, fi.sz, fi.tm));
 
 	    if (strcmp (bstate->pi->send->net_name, fi.fn) == 0 && bstate->pi->send->status != FSTAT_WAITACK) {
 	        DEB((D_24554, "aborting current file"));

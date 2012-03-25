@@ -254,9 +254,9 @@ int p_tx_fopen(s_protinfo *pi, s_filehint *hint)
 		return 1;
 		
 	if (hint) {
-	    DEB((D_OUTBOUND, "trying to reopen file %s size %d time %d", hint->fn, hint->sz, hint->tm));
+	    DEB((D_OUTBOUND, "trying to reopen file %s size %d time %d (nsent=%d)", hint->fn, hint->sz, hint->tm, pi->n_sentfiles));
 	    int i;
-	    for (i=0; i++; i<pi->n_sentfiles) {
+	    for (i=0; i<pi->n_sentfiles; i++) {
 	        DEB((D_OUTBOUND, "check %s %d %d", pi->sentfiles[i].net_name, pi->sentfiles[i].bytes_total, pi->sentfiles[i].mod_time));
 	        if (strcmp(pi->sentfiles[i].net_name, hint->fn)==0) {
 	            DEB((D_OUTBOUND, "name match"));
