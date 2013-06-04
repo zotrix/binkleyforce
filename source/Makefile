@@ -1,0 +1,202 @@
+#
+# Copyright (c) 1999-2000, Alexander Belkin <adb@newmail.ru>
+#
+# Copyright (c) 2004, Evgeniy Kozhuhovskiy <e.kozhuhovskiy@gmail.com>
+# 
+# $Id$
+#
+
+prefix=/home/sergey/bforce
+exec_prefix=${prefix}
+
+CC 		= gcc
+INCLUDES	= -I./include
+CFLAGS		= -g -O2 -fno-builtin
+LIBS 		= -lrt
+YACC		= byacc
+INSTALL		= /usr/bin/install -c
+INSTALL_PROGRAM	= ${INSTALL}
+INSTALL_DATA	= ${INSTALL} -m 644
+SRCDIR		= .
+SRCDIRCONF	= $(SRCDIR)/../examples
+CONTRIBDIR	= $(SRCDIR)/../contrib
+
+OWNER		= sergey
+GROUP		= sergey
+CONFDIR		= ${prefix}/etc
+BINDIR		= ${exec_prefix}/bin
+LOGDIR		= /var/log/bforce
+SPOOLDIR	= /var/spool/bforce
+
+DAEMON_LOGFILE	= $(LOGDIR)/bf-daemon
+BFORCE_LOGFILE	= $(LOGDIR)/bf-log
+BFORCE_DEBFILE	= $(LOGDIR)/bf-debug
+BFORCE_DEBLEVEL	= 0L
+BFORCE_CFGFILE	= $(CONFDIR)/bforce.conf
+
+DEFINES		= -DDAEMON_LOGFILE=\"$(DAEMON_LOGFILE)\" \
+		-DBFORCE_LOGFILE=\"$(BFORCE_LOGFILE)\" \
+		-DBFORCE_DEBFILE=\"$(BFORCE_DEBFILE)\" \
+		-DBFORCE_DEBLEVEL=$(BFORCE_DEBLEVEL) \
+		-DBFORCE_CFGFILE=\"$(BFORCE_CFGFILE)\" \
+		-DBF_OS=\"linux-gnu\" -DHAVE_CONFIG_H
+
+SUBDIRS 	= bforce bfutil
+
+BFINDEX_OBJS = bfutil/bfindex.o \
+		bforce/conf_deinit.o bforce/conf_proc.o \
+		bforce/conf_read.o bforce/conf_get.o \
+		bforce/logger.o bforce/nodelist.o \
+		bforce/u_file.o bforce/u_ftn.o \
+		bforce/u_misc.o bforce/u_string.o \
+		bforce/u_time.o
+
+NLOOKUP_OBJS = bfutil/nlookup.o \
+		bforce/conf_deinit.o bforce/conf_proc.o \
+		bforce/conf_read.o bforce/conf_get.o \
+		bforce/logger.o bforce/nodelist.o \
+		bforce/u_file.o bforce/u_ftn.o \
+		bforce/u_misc.o bforce/u_string.o \
+		bforce/u_time.o
+
+BFSTAT_OBJS	= bfutil/bfstat.o \
+		bforce/conf_deinit.o bforce/conf_proc.o \
+		bforce/conf_read.o bforce/conf_get.o \
+		bforce/outb_flo.o bforce/outb_fsqueue.o \
+		bforce/sess_stat.o \
+		bforce/outb_getname.o bforce/outb_sysqueue.o \
+		bforce/outb_scan.o bforce/logger.o \
+		bforce/u_file.o \
+		bforce/u_ftn.o bforce/u_misc.o	\
+		bforce/u_string.o bforce/u_time.o \
+		bforce/u_plock.o
+
+BFORCE_OBJS	= bforce/bforce.o \
+		bforce/daemon.o bforce/daemon_branch.o \
+		bforce/daemon_call.o bforce/daemon_lines.o \
+		bforce/conf_deinit.o \
+		bforce/conf_proc.o bforce/conf_read.o \
+		bforce/conf_get.o bforce/expression.o \
+		bforce/freq_bark.o bforce/freq_proc.o \
+		bforce/freq_srif.o bforce/freq_wazoo.o \
+		bforce/io_modem.o bforce/io_tcpip.o \
+		bforce/io_unix_lock.o bforce/io_unix_modem.o \
+		bforce/io_unix_tio.o bforce/io_unix_tty.o \
+		bforce/logger.o bforce/nodelist.o \
+		bforce/os_unix.o bforce/outb_bsy.o \
+		bforce/outb_flo.o bforce/outb_fsqueue.o \
+		bforce/outb_getname.o bforce/outb_sysqueue.o \
+		bforce/outb_scan.o bforce/prot_common.o \
+		bforce/prot_binkp.o bforce/prot_binkp_api.o \
+		bforce/prot_binkp_misc.o bforce/prot_hydra.o \
+		bforce/prot_xmrecv.o bforce/prot_xmsend.o \
+		bforce/prot_zmmisc.o bforce/prot_zmrecv.o \
+		bforce/prot_zmsend.o \
+		bforce/prot_yoohoo.o bforce/prot_yoohoo_api.o \
+		bforce/prot_emsi.o bforce/prot_emsi_misc.o \
+		bforce/prot_emsi_api.o \
+		bforce/sess_common.o bforce/sess_stat.o \
+		bforce/sess_call.o bforce/sess_answ.o \
+		bforce/sess_init.o bforce/sess_main.o \
+		bforce/u_crc.o bforce/u_ftn.o \
+		bforce/u_md5.o \
+		bforce/u_misc.o bforce/u_string.o \
+		bforce/u_time.o bforce/u_file.o \
+		bforce/u_pkt.o bforce/u_recode.o \
+		bforce/u_plock.o bforce/netspool.o
+
+.c.o:
+		@echo Compiling $*.c
+		@$(CC) $(CFLAGS) $(INCLUDES) $(DEFINES) -c $< -o $@
+
+all:		bin bin/bforce bin/bfindex bin/bfstat bin/nlookup
+
+bin:		
+		test -d bin || mkdir bin
+
+bforce/expression.c: bforce/expression.y
+		$(YACC) bforce/expression.y
+		mv y.tab.c bforce/expression.c
+
+bin/bforce:	$(BFLIB_OBJS) $(BFORCE_OBJS)
+		@echo "Linking $@"
+		@$(CC) $(BFLIB_OBJS) $(BFORCE_OBJS) $(LIBS) -o $@
+
+bin/bfindex: $(BFLIB_OBJS) $(BFINDEX_OBJS)
+		@echo "Linking $@"
+		@$(CC) $(BFLIB_OBJS) $(BFINDEX_OBJS) $(LIBS) -o $@
+
+bin/nlookup: $(BFLIB_OBJS) $(NLOOKUP_OBJS)
+		@echo "Linking $@"
+		@$(CC) $(BFLIB_OBJS) $(NLOOKUP_OBJS) $(LIBS) -o $@
+
+bin/bfstat:	$(BFLIB_OBJS) $(BFSTAT_OBJS)
+		@echo "Linking $@"
+		@$(CC) $(BFLIB_OBJS) $(BFSTAT_OBJS) $(LIBS) -o $@
+
+
+clean:		
+		@for i in $(SUBDIRS); do (rm -f $$i/*.o || exit 1); done
+		rm -f ./bforce/expression.c
+		rm -f ./bin/bforce
+		rm -f ./bin/bfindex
+		rm -f ./bin/bfstat
+		rm -f ./bin/nlookup
+		rm -f ./bin/core
+clean-am:	
+		rm -f ./Makefile
+		rm -f ./include/config.h
+		rm -f ./config.log
+		rm -f ./config.status
+clean-ac:	
+		rm -f ./configure
+
+distclean:	clean clean-am
+
+distclean-m: 	distclean clean-ac
+
+
+ifnames:
+		@for i in $(SUBDIRS); do (ifnames $$i/*.c || exit 1); done
+
+bforce/expression.y.o:	bforce/expression.y.c bforce/expression.l.c
+
+bforce/expression.l.o:	bforce/expression.y.c bforce/expression.l.c
+
+installdirs:
+		if [ ! -d $(CONFDIR) ]; then mkdir -p $(CONFDIR); fi
+		if [ ! -d $(BINDIR) ]; then mkdir -p $(BINDIR); fi
+		if [ ! -d $(LOGDIR) ]; then mkdir -p $(LOGDIR); fi
+		if [ ! -d $(SPOOLDIR) ]; then mkdir -p $(SPOOLDIR); fi
+		if [ ! -d $(SPOOLDIR)/bt/in ]; then mkdir -p $(SPOOLDIR)/bt/in; fi
+		if [ ! -d $(SPOOLDIR)/bt/pin ]; then mkdir -p $(SPOOLDIR)/bt/pin; fi
+		if [ ! -d $(SPOOLDIR)/bt/out ]; then mkdir -p $(SPOOLDIR)/bt/out; fi
+		if [ ! -d $(SPOOLDIR)/ndl ]; then mkdir -p $(SPOOLDIR)/ndl; fi
+		if [ ! -d $(SPOOLDIR)/bforce ]; then mkdir -p $(SPOOLDIR); fi
+		chown $(OWNER):$(GROUP) $(CONFDIR)
+		chown $(OWNER):$(GROUP) $(LOGDIR)
+		chown $(OWNER):$(GROUP) $(SPOOLDIR)/bt/in
+		chown $(OWNER):$(GROUP) $(SPOOLDIR)/bt/pin
+		chown $(OWNER):$(GROUP) $(SPOOLDIR)/bt/out
+		chown $(OWNER):$(GROUP) $(SPOOLDIR)/ndl
+		chown $(OWNER):$(GROUP) $(SPOOLDIR)
+
+install-bin:
+		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(SRCDIR)/bin/bforce $(BINDIR)/bforce
+		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(SRCDIR)/bin/bfindex $(BINDIR)/bfindex
+		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(SRCDIR)/bin/bfstat $(BINDIR)/bfstat
+		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(SRCDIR)/bin/nlookup $(BINDIR)/nlookup
+
+install-config:
+		$(INSTALL_DATA) -o $(OWNER) -g $(GROUP) $(SRCDIRCONF)/bforce.conf $(CONFDIR)/bforce.conf.sample
+		$(INSTALL_DATA) -o $(OWNER) -g $(GROUP) $(SRCDIRCONF)/bforce.subst $(CONFDIR)/bforce.subst.sample
+		$(INSTALL_DATA) -o $(OWNER) -g $(GROUP) $(SRCDIRCONF)/bforce.passwd $(CONFDIR)/bforce.passwd.sample
+		$(INSTALL_DATA) -o $(OWNER) -g $(GROUP) $(SRCDIRCONF)/freq.aliases $(CONFDIR)/freq.aliases.sample
+		$(INSTALL_DATA) -o $(OWNER) -g $(GROUP) $(SRCDIRCONF)/freq.dirs $(CONFDIR)/freq.dirs.sample
+
+install-contrib:
+		$(INSTALL_PROGRAM) -o $(OWNER) -g $(GROUP) $(CONTRIBDIR)/outman $(BINDIR)/outman
+		@echo "Please, edit $(BINDIR)/outman"
+
+install:	install-bin install-config
+
