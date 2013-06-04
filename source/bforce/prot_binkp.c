@@ -977,7 +977,7 @@ case BPMSG_GET:              /* Get a file from offset */
 
             if( bstate->pi->send ) {
                 DEB((D_24554, "aborting current file"));
-                p_tx_fclose(bstate->pi);
+                //p_tx_fclose(bstate->pi); may be requested again
             }
 
             s_filehint hint;

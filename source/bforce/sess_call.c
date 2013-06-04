@@ -376,7 +376,7 @@ int call_system_modem(void)
 		else
 			log("warning: no modem dial suffix defined");
 		
-		log("calling %s (%s, %s)",
+		log("calling with modem %s (%s, %s)",
 			ftn_addrstr(abuf, state.node.addr),
 			(state.node.name && *state.node.name) ? state.node.name  : "<none>",
 			string_printable(dialstring));
@@ -516,7 +516,7 @@ defalt:
 		return BFERR_FATALERROR;
 	}
 
-	log("calling %s (%s, %s)",
+	log("calling with internet %s (%s, %s)",
 		ftn_addrstr(abuf, state.node.addr),
 		(state.node.name  && *state.node.name ) ? state.node.name  : "<none>",
 		(state.node.host && *state.node.host) ? state.node.host : "<none>");

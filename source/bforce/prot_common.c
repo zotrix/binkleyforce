@@ -627,7 +627,7 @@ long int p_tx_readfile(char *buffer, size_t buflen, s_protinfo *pi)
 		pi->send->bytes_received = ftell_pos;
 		return -1;
 	}
-	
+
 	if( stat(pi->send->fname, &st) == -1 && errno == ENOENT )
 	{
 		log("send: file not found! do you want to skip it?");

@@ -85,6 +85,7 @@ int rx_zmodem(s_protinfo *pi, bool caller)
 
 	while(1)
 	{
+                DEB((D_PROT, "rx_zmodem: one more loop"));
 		if( timer_expired(deadtimer) )
 		{
 			DEB((D_PROT, "rx_zmodem: deadtimer = %ld", (long)deadtimer));
