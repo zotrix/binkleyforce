@@ -53,6 +53,7 @@
 #define BINKP_OPT_MD5       0x08   /* CRAM-MD5 authentication */
 #define BINKP_OPT_SHA1      0x10   /* CRAM-SHA1 authentication */
 #define BINKP_OPT_DES       0x20   /* CRAM-DES authentication */
+#define BINKP_OPT_CRYPT     0x40   /* CRYPT support */
 
 typedef enum binkp_mode {
   bmode_failoff,
@@ -85,6 +86,8 @@ typedef struct {
 	bool    has_TRF;
 	int     TRF_PKT;
 	int     TRF_other;
+	unsigned long keys_out[3]; /* Encription keys for outbound */
+	unsigned long keys_in[3]; /* Encription keys for inbound */
 } s_binkp_sysinfo;
 
 
@@ -180,5 +183,13 @@ int binkp_remote_traffic(s_handshake_protocol *THIS, s_traffic *dest);
 /* prot_binkp_api.c */
 extern s_handshake_protocol handshake_protocol_binkp;
 
+#define CRC32(c, b) (crc_32_tab[((int)(c) ^ (b)) & 0xff] ^ ((c) >> 8))
+extern unsigned long crc_32_tab[256];
+
+int  update_keys (unsigned long keys[3], int c);
+void init_keys (unsigned long keys[3], const char *passwd);
+int  decrypt_byte (unsigned long keys[3]);
+void decrypt_buf (char *buf, unsigned int bufsize, unsigned long keys[3]);
+void encrypt_buf (char *buf, unsigned int bufsize, unsigned long keys[3]);
 
 #endif /* _P_BINKP_H_ */

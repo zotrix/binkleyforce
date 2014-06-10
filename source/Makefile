@@ -6,14 +6,14 @@
 # $Id$
 #
 
-prefix=/home/sergey/bforce
+prefix=/usr/local
 exec_prefix=${prefix}
 
 CC 		= gcc
 INCLUDES	= -I./include
 CFLAGS		= -g -O2 -fno-builtin
-LIBS 		= -lrt
-YACC		= byacc
+LIBS 		= 
+YACC		= bison -y
 INSTALL		= /usr/bin/install -c
 INSTALL_PROGRAM	= ${INSTALL}
 INSTALL_DATA	= ${INSTALL} -m 644
@@ -21,9 +21,9 @@ SRCDIR		= .
 SRCDIRCONF	= $(SRCDIR)/../examples
 CONTRIBDIR	= $(SRCDIR)/../contrib
 
-OWNER		= sergey
-GROUP		= sergey
-CONFDIR		= ${prefix}/etc
+OWNER		= ftn
+GROUP		= ftn
+CONFDIR		= /usr/local/etc/ftn/bforce
 BINDIR		= ${exec_prefix}/bin
 LOGDIR		= /var/log/bforce
 SPOOLDIR	= /var/spool/bforce
@@ -103,7 +103,8 @@ BFORCE_OBJS	= bforce/bforce.o \
 		bforce/u_misc.o bforce/u_string.o \
 		bforce/u_time.o bforce/u_file.o \
 		bforce/u_pkt.o bforce/u_recode.o \
-		bforce/u_plock.o bforce/netspool.o
+		bforce/u_plock.o bforce/netspool.o \
+		bforce/prot_binkp_crypt.o
 
 .c.o:
 		@echo Compiling $*.c

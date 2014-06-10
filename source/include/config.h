@@ -61,7 +61,7 @@
 #define BFORCE_LOCK_DIR "/var/lock/"
 
 /* Do you want to use syslog? */
-#define USE_SYSLOG 1
+/* #undef USE_SYSLOG */
 
 /* Netspool */
 #define NETSPOOL 1
