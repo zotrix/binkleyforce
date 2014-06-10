@@ -1,4 +1,4 @@
-$Id$:
+[![Build Status](https://travis-ci.org/askovpen/binkleyforce.svg?branch=master)](https://travis-ci.org/askovpen/binkleyforce)
 
 BinkleyForce FTN mailer
 -----------------------
