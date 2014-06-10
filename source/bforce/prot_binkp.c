@@ -681,7 +681,7 @@ case BPMSG_ADR:              /* List of addresses */
 		DEB((D_24554, "sending options"));
 		bstate->extracmd[0] = BPMSG_NUL;
 		bstate->extraislast = false;
-		sprintf(bstate->extracmd+1,"OPT MB");
+		sprintf(bstate->extracmd+1,"OPT MB CRYPT");
 		s_override ovr;
 		for(i = 0; i < state.n_remoteaddr; i++) {
 		    ovr.sFlags = "";
