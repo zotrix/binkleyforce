@@ -140,6 +140,7 @@ void binkp_log_options(s_binkp_sysinfo *remote)
 {
 	if (remote->options & BINKP_OPT_MB) log ("We are in MB mode.");
 	if (remote->options & BINKP_OPT_NR) log ("We are in NR mode.");
+	if (remote->options & BINKP_OPT_CRYPT) log ("We are in CRYPT mode.");
 }
 
 /*****************************************************************************
@@ -309,6 +310,9 @@ void binkp_parse_options(s_binkp_sysinfo *binkp, char *options)
 	{
 		if( !strcmp(p, "NR") ) {
 			binkp->options |= BINKP_OPT_NR;
+		} else
+		if( !strcmp(p, "CRYPT") ) {
+			binkp->options |= BINKP_OPT_CRYPT;
 		} else
 		if( !strcmp(p, "MB") )
 			binkp->options |= BINKP_OPT_MB;

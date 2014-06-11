@@ -140,6 +140,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(mkdir mktime select socket strspn strcasecmp mkstemp)
 AC_CHECK_FUNCS(rename statfs statvfs setproctitle)
-
+AC_CHECK_FUNCS([clock_gettime], [CLOCK_LIB=],[AC_CHECK_LIB([rt], [clock_gettime], [CLOCK_LIB=-lrt])])
+AC_SUBST([CLOCK_LIB])
 AC_OUTPUT(Makefile)
 AC_OUTPUT(../debian/Makefile)

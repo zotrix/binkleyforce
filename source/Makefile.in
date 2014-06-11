@@ -12,7 +12,7 @@ exec_prefix=@exec_prefix@
 CC 		= @CC@
 INCLUDES	= -I./include
 CFLAGS		= @CFLAGS@ -fno-builtin
-LIBS 		= @LIBS@
+LIBS 		= @LIBS@ @CLOCK_LIB@
 YACC		= @YACC@
 INSTALL		= @INSTALL@
 INSTALL_PROGRAM	= @INSTALL_PROGRAM@
@@ -103,7 +103,8 @@ BFORCE_OBJS	= bforce/bforce.o \
 		bforce/u_misc.o bforce/u_string.o \
 		bforce/u_time.o bforce/u_file.o \
 		bforce/u_pkt.o bforce/u_recode.o \
-		bforce/u_plock.o bforce/netspool.o
+		bforce/u_plock.o bforce/netspool.o \
+		bforce/prot_binkp_crypt.o
 
 .c.o:
 		@echo Compiling $*.c

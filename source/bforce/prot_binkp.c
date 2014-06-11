@@ -137,6 +137,8 @@ int binkp_loop(s_binkp_state *bstate) {
                     return PRC_ERROR;
                 }
                 writebuf[1] = block_length&0xff;
+                if (bstate->mode==bmode_transfer && bstate->remote_data->options&BINKP_OPT_CRYPT)
+                    encrypt_buf(writebuf, have_to_write, bstate->remote_data->keys_out);
             }
             if (m==2 || m==3) {
                 DEB((D_24554, "no more to send"));
@@ -204,6 +206,8 @@ int binkp_loop(s_binkp_state *bstate) {
                 log("read: remote socket shutdown");
                 return PRC_REMOTEABORTED;
             }
+            if (bstate->mode==bmode_transfer && bstate->remote_data->options & BINKP_OPT_CRYPT)
+                decrypt_buf(readbuf+read_pos, n, bstate->remote_data->keys_in);
             DEB((D_24554, "got %d bytes", n));
             want_read -= n;
             read_pos += n;
@@ -266,6 +270,11 @@ int binkp_loop(s_binkp_state *bstate) {
 
 int binkp_outgoing(s_binkp_sysinfo *local_data, s_binkp_sysinfo *remote_data)
 {
+    char *p;
+    init_keys(remote_data->keys_out, local_data->passwd ? local_data->passwd : "-");
+    init_keys(remote_data->keys_in,  "-");
+    for (p=local_data->passwd ? local_data->passwd : "-"; *p; p++)
+        update_keys(remote_data->keys_in, (int)*p);
     s_binkp_state s;
     s.mode = bmode_outgoing_handshake;
     s.local_data = local_data;
@@ -399,7 +408,7 @@ case 6:
 case 7:
 	    if (bstate->mode==bmode_outgoing_handshake) {
 	        buf[0]=BPMSG_NUL;
-		strcpy(buf+1, "OPT MB");
+		strcpy(buf+1, "OPT MB CRYPT");
 		if (!nodelist_checkflag (state.node.flags, "NR"))
 			strcat(buf+1, " NR");
 		// ND is too complicated and have unclear gain
@@ -506,6 +515,15 @@ case 4:
         if (bstate->mode==bmode_incoming_handshake) {
             DEB((D_24554, "incoming handshake is complete"));
             bstate->complete = true;
+            char *p;
+            char pbuf[32];
+            for (i=0;i<state.n_remoteaddr;i++)
+                if( !session_get_password(state.remoteaddrs[i].addr, pbuf, sizeof(pbuf)) ){
+                    init_keys(bstate->remote_data->keys_in, pbuf?pbuf:"-");
+                    init_keys(bstate->remote_data->keys_out,  "-");
+                    for (p=pbuf?pbuf:"-"; *p; p++)
+                        update_keys(bstate->remote_data->keys_out, (int)*p);
+                }
         }
         else {
             DEB((D_24554, "outgoing handshake: everything is sent"));
@@ -534,6 +552,7 @@ case 4:
                     buf[0] = BPMSG_FILE;
                     *block_length = 1+sprintf(buf+1, "%s %ld %ld -1", bstate->pi->send->net_name, 
                             (long)bstate->pi->send->bytes_total, (long)bstate->pi->send->mod_time);
+                    DEB((D_24554, "M_FILE: %s", buf+1));
                     *block_type = BINKP_BLK_CMD;
                     return 3; // no state change. phase would be changed to 1 by recv when M_GET is received
                 }
@@ -544,6 +563,7 @@ case 4:
                 buf[0] = BPMSG_FILE;
                 *block_length = 1+sprintf(buf+1, "%s %ld %ld 0", bstate->pi->send->net_name, 
                         bstate->pi->send->bytes_total, bstate->pi->send->mod_time);
+                DEB((D_24554, "M_FILE: %s", buf+1));
                 *block_type = BINKP_BLK_CMD;
                 bstate->phase += 1;
                 return 1;
@@ -661,7 +681,7 @@ case BPMSG_ADR:              /* List of addresses */
 		DEB((D_24554, "sending options"));
 		bstate->extracmd[0] = BPMSG_NUL;
 		bstate->extraislast = false;
-		sprintf(bstate->extracmd+1,"OPT MB");
+		sprintf(bstate->extracmd+1,"OPT MB CRYPT");
 		s_override ovr;
 		for(i = 0; i < state.n_remoteaddr; i++) {
 		    ovr.sFlags = "";
@@ -853,6 +873,8 @@ got_skip:
 	        PROTO_ERROR("error parsing M_GOT/M_SKIP");
 	    }
 
+            DEB((D_24554, "params: fn=%s sz=%d tm=%d", fi.fn, fi.sz, fi.tm));
+
 	    if (strcmp (bstate->pi->send->net_name, fi.fn) == 0 && bstate->pi->send->status != FSTAT_WAITACK) {
 	        DEB((D_24554, "aborting current file"));
 	        if (bstate->pi->send->netspool) {
@@ -973,7 +995,7 @@ case BPMSG_GET:              /* Get a file from offset */
 
             if( bstate->pi->send ) {
                 DEB((D_24554, "aborting current file"));
-                p_tx_fclose(bstate->pi);
+                //p_tx_fclose(bstate->pi); may be requested again
             }
 
             s_filehint hint;
