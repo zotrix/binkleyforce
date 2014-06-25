@@ -341,7 +341,7 @@ int session_set_inbound(void)
 		}  */
 		log("inbound: %s", buf);
 		state.inbound = (char*)xstrcpy(buf);
-		snprintf( buf, PATH_MAX+30, "/bin/mkdir -p %s -m 700", state.inbound ); /* 30 additional chars allowed */
+		snprintf( buf, PATH_MAX+30, "/bin/mkdir -p -m 700 %s", state.inbound ); /* 30 additional chars allowed */
 		system( buf );
 	}
 	else
