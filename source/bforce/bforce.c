@@ -334,11 +334,6 @@ int main(int argc, char *argv[], char *envp[])
 		}
 	}
 	
-	if( opts.inetd && opts.runmode != MODE_ANSWER && opts.runmode != MODE_CALL_STDIO )
-	{
-		usage();
-		exit(BFERR_FATALERROR);
-	}
 	
 	/* Expression checker use it, so init first */
 	init_state(&state);
@@ -422,6 +417,15 @@ int main(int argc, char *argv[], char *envp[])
 			}
 		}
 	}
+
+	/*
+	  if( opts.inetd && opts.runmode != MODE_ANSWER && opts.runmode != MODE_CALL_STDIO )
+	  {
+	  usage();
+	  exit(BFERR_FATALERROR);
+	  }
+	*/
+
 
 /*	if( (rc = log_open(BFORCE_LOGFILE, NULL, NULL)) ) //compiled in
 	{
