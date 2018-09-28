@@ -13,8 +13,13 @@ CC=$PREFIX-gcc
 export PATH CC CPP
 
 #make clean
-#./configure --prefix=/opt/bforce --host=mips-openwrt-linux --disable-syslog --enable-netspool --with-logdir=/home/fido/log --with-spooldir=/home/fido/bforce
-
+if [ ! -e Makefile ]
+then
+./configure --prefix=/opt/bforce --host=mips-openwrt-linux --disable-syslog --enable-netspool --with-logdir=/home/fido/log --with-spooldir=/home/fido/bforce
+make -B
+else
 
 #make && scp bin/bforce root@gw-home:/opt/bforce/bin/bforce-new
 make && scp bin/bforce root@172.31.251.1:/opt/bforce/bin/
+
+fi
