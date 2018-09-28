@@ -172,7 +172,7 @@ void netspool_receive(s_netspool_state *state)
 
     if(strncmp(strbuf, "FILENAME ", 9)==0) {
         strcpy(state->filename, strbuf+9);
-        puts(state->filename);
+        //puts(state->filename);
     } else {
 	state->state = NS_ERROR;
 	state->error = "expected filename or queue empty";
@@ -265,14 +265,14 @@ void savefile(const char *fn, unsigned long long l, int s)
     f=open(fn, O_CREAT|O_EXCL|O_WRONLY, 0664);
     if(f==-1) {
 	    puts("error open file");
-	    printf("%d %s\n", errno, strerror(errno));
+	    DEBprintf("%d %s\n", errno, strerror(errno));
 	    exit(-3);
     }
     while(l) {
 	n1 = write(f, BUF, n);
 	if(n1!=n) {
 	    puts("error writing file");
-	    printf("%d %s\n", errno, strerror(errno));
+	    DEBrintf("%d %s\n", errno, strerror(errno));
 	    exit(-3);
 	}
     }

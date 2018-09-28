@@ -1,0 +1,20 @@
+#!/bin/sh
+
+TOOLCHAIN=$HOME/openwrt/openwrt-sdk-18.06.1-ar71xx-generic_gcc-7.3.0_musl.Linux-x86_64/staging_dir/toolchain-mips_24kc_gcc-7.3.0_musl
+#/OpenWRT/OpenWrt-Toolchain-ar71xx-for-mips_r2-gcc-4.3.3+cs_uClibc-0.9.30.1/toolchain-mips_r2_gcc-4.3.3+cs_uClibc-0.9.30.1
+
+PATH=$PATH:$TOOLCHAIN/bin
+PREFIX=mips-openwrt-linux
+
+CPP=$PREFIX-cpp
+CC=$PREFIX-gcc
+#CFLAGS=
+
+export PATH CC CPP
+
+#make clean
+#./configure --prefix=/opt/bforce --host=mips-openwrt-linux --disable-syslog --enable-netspool --with-logdir=/home/fido/log --with-spooldir=/home/fido/bforce
+
+
+#make && scp bin/bforce root@gw-home:/opt/bforce/bin/bforce-new
+make && scp bin/bforce root@172.31.251.1:/opt/bforce/bin/
