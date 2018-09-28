@@ -6,13 +6,13 @@
 # $Id$
 #
 
-prefix=/home/sergey/bforce
+prefix=/opt/bforce
 exec_prefix=${prefix}
 
-CC 		= gcc
+CC 		= mips-openwrt-linux-gcc
 INCLUDES	= -I./include
 CFLAGS		= -g -O2 -fno-builtin
-LIBS 		= -lrt
+LIBS 		= 
 YACC		= byacc
 INSTALL		= /usr/bin/install -c
 INSTALL_PROGRAM	= ${INSTALL}
@@ -21,12 +21,12 @@ SRCDIR		= .
 SRCDIRCONF	= $(SRCDIR)/../examples
 CONTRIBDIR	= $(SRCDIR)/../contrib
 
-OWNER		= sergey
-GROUP		= sergey
+OWNER		= uucp
+GROUP		= news
 CONFDIR		= ${prefix}/etc
 BINDIR		= ${exec_prefix}/bin
-LOGDIR		= /var/log/bforce
-SPOOLDIR	= /var/spool/bforce
+LOGDIR		= /home/fido/log
+SPOOLDIR	= /home/fido/bforce
 
 DAEMON_LOGFILE	= $(LOGDIR)/bf-daemon
 BFORCE_LOGFILE	= $(LOGDIR)/bf-log

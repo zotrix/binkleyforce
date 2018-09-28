@@ -122,9 +122,10 @@ int binkp_loop(s_binkp_state *bstate) {
             bstate->continuesend = false;
         }
         if (have_to_write==0 && (!no_more_to_send || bstate->extracmd[0]!=-1)) {
+            DEB((D_24554, "check getforsend"));
             m = binkp_getforsend(bstate, writebuf+BINKP_HEADER, &block_type, &block_length);
             if(m==1 || m==3) {
-                //DEB((D_24554, "got block for sending %d %hu", block_type, block_length));
+                DEB((D_24554, "got block for sending %d %hu", block_type, block_length));
                 write_pos = 0;
                 have_to_write = block_length+BINKP_HEADER;
                 if( block_type == BINKP_BLK_CMD ) {
@@ -178,13 +179,22 @@ int binkp_loop(s_binkp_state *bstate) {
             }
         }
 
-        DEB((D_24554, "select read: %d write: %d", want_read, have_to_write));
+        DEB((D_24554, "select read: %d write: %d timeout: %d", want_read, have_to_write, timeout));
         if (want_read || have_to_write) {
-          n = tty_select(want_read?&canread:NULL, have_to_write?&canwrite:NULL, timeout);
+/*          n = tty_select(want_read?&canread:NULL, have_to_write?&canwrite:NULL, timeout);
           if( n<0 ) {
+              DEB((D_24554, "select return %d", n));
               log("binkp error on tty_select");
               return PRC_ERROR;
+          }*/
+          // try with timeout 2 second, on error assume we must wait
+          n = tty_select(want_read?&canread:NULL, have_to_write?&canwrite:NULL, 2);
+          if( n<0 ) {
+            DEB((D_24554, "select return %d (timeout?)", n));
+            canread = false;
+            canwrite = false;
           }
+
         }
         else {
             DEB((D_24554, "empty loop %d", ++bstate->emptyloop));
@@ -193,6 +203,8 @@ int binkp_loop(s_binkp_state *bstate) {
                 return PRC_ERROR;
             }
         }
+
+        DEB((D_24554, "select result: read? %d write? %d", canread, canwrite));
 
         if(want_read && canread) {
             n = tty_read(readbuf+read_pos, want_read);
@@ -211,7 +223,7 @@ int binkp_loop(s_binkp_state *bstate) {
                 // have read header, want read body
                 DEB((D_24554, "it should be 0: %d", want_read));
                 want_read = ((unsigned short)(readbuf[0]&0x7F)<<8) | readbuf[1];
-                DEB((D_24554, "got block header, block length %u", want_read));
+                DEB((D_24554, "got block header, block length %u is command %d", want_read, readbuf[0]>>7));
             } // no else here: if want_read may be zero here for zero length block
         }
 
@@ -260,6 +272,7 @@ int binkp_loop(s_binkp_state *bstate) {
             write_pos += n;
             have_to_write -= n;
         }
+        DEB((D_24554, "binkp_loop next, waiting_got: %d", bstate->waiting_got));
     }
     return bstate->rc;
 }

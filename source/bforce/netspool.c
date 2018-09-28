@@ -11,6 +11,8 @@
 #include "includes.h"
 #include "netspool.h"
 
+#include "logger.h"
+
 #ifdef NETSPOOL
 
 int readstr(int s, char *buf, int len) {
@@ -161,7 +163,8 @@ void netspool_receive(s_netspool_state *state)
 
     r = readstr(state->socket, strbuf, STRBUF);
     if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
-    //puts(strbuf);
+    DEB((D_24554, "netspool_receive: %s", strbuf));
+    
     if(strcmp(strbuf, "QUEUE EMPTY")==0) {
 	state->state = NS_READY;
 	return;
@@ -169,22 +172,27 @@ void netspool_receive(s_netspool_state *state)
 
     if(strncmp(strbuf, "FILENAME ", 9)==0) {
         strcpy(state->filename, strbuf+9);
-        //puts(state->filename);
+        puts(state->filename);
     } else {
 	state->state = NS_ERROR;
 	state->error = "expected filename or queue empty";
 	return;
     }
 
+    // read more
     r = readstr(state->socket, strbuf, STRBUF);
     if( r ) { state->state = NS_ERROR; state->error = "IO error"; return; }
+    DEB((D_24554, "netspool_receive2: %s", strbuf));
+
     if(strncmp(strbuf, "BINARY ", 7)==0) {
+	DEB((D_24554, "netspool BINARY [%s]", strbuf+7));
 	    /*if(filename[0]==0) {
 		puts("no filename");
 		exit(-5);
 	    } */
-	sscanf(strbuf+7, "%Lu", &state->length);
-	//printf("length=%Lu\n", state->length);
+	//sscanf(strbuf+7, "%Lu", &state->length);
+	state->length = strtoull(strbuf+7, NULL, 10);
+	//DEB((D_24554, "length=%d", state->length));
 	state->state = NS_RECVFILE;
     } else {
 	state->state = NS_ERROR;

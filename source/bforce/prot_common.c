@@ -91,7 +91,7 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 				best = ptrl;
 		}
 	}
-	//DEB((D_OUTBOUND, log("scan1 done");
+	//DEB((D_OUTBOUND, log("scan1 done"));
 	
 	if( best )
 	{
@@ -107,14 +107,14 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 			return 0;
 		}
 	}
-	//DEB((D_OUTBOUND, log("scan2 done");
+	//DEB((D_OUTBOUND, log("scan2 done"));
 	
 	/* network queue */
 #ifdef NETSPOOL
 
         if (hint) return 1; // cannot choose
 
-	/*DEB((D_OUTBOUND, log("netspool next file");*/
+	/*DEB((D_OUTBOUND, log("netspool next file"));*/
 	if(state.netspool.state == NS_NOTINIT) {
 	    /*DEB((D_OUTBOUND, log("new netspool connection");*/
 #define ADDRBUF 3000
@@ -163,26 +163,26 @@ static int prot_get_next_file(s_filelist **dest, s_protinfo *pi)
 	}
 
 	if(state.netspool.state == NS_READY) {
-	    /*DEB((D_OUTBOUND, log("netspool request");*/
+	    DEB((D_OUTBOUND, "netspool request"));
 	    netspool_query(&state.netspool, "ALL");
 	}
 
 	if(state.netspool.state == NS_RECEIVING) {
-	    //DEB((D_OUTBOUND, log("netspool begin receive");
 	    netspool_receive(&state.netspool);
+	    DEB((D_OUTBOUND, "netspool begin receive %s size=%llu", state.netspool.filename, state.netspool.length));
 	} else {
-	    //DEB((D_OUTBOUND, log("netspool could not start receive");
+	    DEB((D_OUTBOUND, "netspool could not start receive"));
 	    return 1;
 	}
 
 	if(state.netspool.state == NS_RECVFILE) {
-	    /*DEB((D_OUTBOUND, log("netspool start file");*/
+	    DEB((D_OUTBOUND, "netspool start file"));
 	    *dest = NULL;
 	    return 0;
 	}
 
 	if(state.netspool.state == NS_READY) {
-	    //DEB((D_OUTBOUND, log("netspool queue empty");
+	    DEB((D_OUTBOUND, "netspool queue empty"));
 	    netspool_end(&state.netspool);
 	}
 
