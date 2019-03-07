@@ -1,0 +1,15 @@
+#!/bin/sh
+
+#TOOLCHAIN=$HOME/OpenWRT/OpenWrt-Toolchain-ar71xx-for-mips_r2-gcc-4.3.3+cs_uClibc-0.9.30.1/toolchain-mips_r2_gcc-4.3.3+cs_uClibc-0.9.30.1
+
+#PATH=$PATH:$TOOLCHAIN/usr/bin
+#PREFIX=mips-openwrt-linux
+
+#CPP=$PREFIX-cpp
+#CC=$PREFIX-gcc
+#CFLAGS=
+
+#export PATH CC CPP
+
+#make clean
+./configure --prefix=/opt/bforce --disable-syslog --with-logdir=/var/log/fido --with-spooldir=/var/spool/fido
